@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: serverclips-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: serverclips
+      POSTGRES_PASSWORD: serverclips
+      POSTGRES_DB: serverclips
+    volumes:
+      - serverclips_pgdata:/var/lib/postgresql/data
+
+volumes:
+  serverclips_pgdata:

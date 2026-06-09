@@ -1,0 +1,457 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  CREATOR
+  MODERATOR
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  WARNED
+  SUSPENDED
+  BANNED
+}
+
+enum ServerType {
+  OLDSCHOOL
+  MIDDLESCHOOL
+  NEWSCHOOL
+  PVP
+  PVM
+  MIXED
+}
+
+enum ContentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+  DELETED
+}
+
+enum VideoVisibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+}
+
+enum ServerMemberRole {
+  OWNER
+  ADMIN
+  PROMOTER
+  ANALYST
+}
+
+enum VerificationStatus {
+  NONE
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum CommentStatus {
+  VISIBLE
+  HIDDEN
+  DELETED
+}
+
+enum ReportReason {
+  COPYRIGHT
+  SPAM
+  SCAM
+  OFFENSIVE
+  MISLEADING
+  MALWARE
+  OTHER
+}
+
+enum ReportTargetType {
+  VIDEO
+  COMMENT
+  USER
+  SERVER
+  LINK
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+enum ViewSource {
+  FEED
+  SEARCH
+  PROFILE
+  SERVER_PAGE
+}
+
+enum ReferrerSource {
+  FEED
+  SEARCH
+  PROFILE
+  SERVER_PAGE
+}
+
+model User {
+  id                String          @id @default(cuid())
+  email             String          @unique
+  emailVerified     DateTime?
+  passwordHash      String?
+  role              Role            @default(USER)
+  status            UserStatus      @default(ACTIVE)
+  username          String?         @unique
+  displayName       String?
+  bio               String?         @db.Text
+  avatarUrl         String?
+  bannerUrl         String?
+  websiteUrl        String?
+  socialLinks       Json?
+  likedVideosPublic Boolean         @default(false)
+  savedVideosPublic Boolean         @default(false)
+  allowFollowers    Boolean         @default(true)
+  name              String?
+  image             String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  accounts          Account[]
+  sessions          Session[]
+  videos            Video[]         @relation("VideoCreator")
+  comments          Comment[]
+  likes             Like[]
+  saves             Save[]
+  followers         Follow[]        @relation("Following")
+  following         Follow[]        @relation("Followers")
+  serverMembers     ServerMember[]
+  serverFollows     ServerFollow[]
+  reports           Report[]        @relation("ReporterReports")
+  auditLogs         AdminAuditLog[] @relation("AdminAuditLogs")
+  impersonationLogs AdminAuditLog[] @relation("ImpersonatedAuditLogs")
+  videoViewEvents   VideoViewEvent[]
+  serverClickEvents ServerClickEvent[]
+  searchEvents      SearchEvent[]
+  recommendationPref RecommendationPreference?
+
+  @@index([username])
+  @@index([status])
+  @@index([role])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Server {
+  id                 String             @id @default(cuid())
+  name               String
+  slug               String             @unique
+  logoUrl            String?
+  bannerUrl          String?
+  description        String             @db.Text
+  websiteUrl         String?
+  discordUrl         String?
+  region             String
+  language           String
+  serverType         ServerType
+  expRate            String
+  yangRate           String
+  dropRate           String
+  launchDate         DateTime?
+  status             ContentStatus      @default(PENDING)
+  verified           Boolean            @default(false)
+  verificationStatus VerificationStatus @default(NONE)
+  featured           Boolean            @default(false)
+  profileViews       Int                @default(0)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  members            ServerMember[]
+  videos             Video[]
+  follows            ServerFollow[]
+  clickEvents        ServerClickEvent[]
+  tags               ServerTag[]
+
+  @@index([status])
+  @@index([serverType])
+  @@index([region])
+  @@index([language])
+  @@index([verified])
+  @@index([launchDate])
+  @@index([slug])
+}
+
+model ServerMember {
+  id        String           @id @default(cuid())
+  serverId  String
+  userId    String
+  role      ServerMemberRole
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  server    Server           @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, userId])
+  @@index([userId])
+  @@index([serverId])
+}
+
+model Video {
+  id           String          @id @default(cuid())
+  creatorId    String
+  serverId     String?
+  title        String
+  description  String?         @db.Text
+  videoUrl     String
+  thumbnailUrl String?
+  duration     Int?
+  status       ContentStatus   @default(PENDING)
+  visibility   VideoVisibility @default(PUBLIC)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  creator      User            @relation("VideoCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  server       Server?         @relation(fields: [serverId], references: [id], onDelete: SetNull)
+  metrics      VideoMetric?
+  comments     Comment[]
+  likes        Like[]
+  saves        Save[]
+  viewEvents   VideoViewEvent[]
+  clickEvents  ServerClickEvent[]
+
+  @@index([status, visibility, createdAt])
+  @@index([serverId])
+  @@index([creatorId])
+  @@index([createdAt])
+}
+
+model VideoMetric {
+  id                  String @id @default(cuid())
+  videoId             String @unique
+  views               Int    @default(0)
+  uniqueViews         Int    @default(0)
+  likes               Int    @default(0)
+  comments            Int    @default(0)
+  saves               Int    @default(0)
+  shares              Int    @default(0)
+  serverClicks        Int    @default(0)
+  profileClicks       Int    @default(0)
+  averageWatchSeconds Float  @default(0)
+  completionRate      Float  @default(0)
+  video               Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+}
+
+model VideoViewEvent {
+  id           String     @id @default(cuid())
+  videoId      String
+  userId       String?
+  sessionId    String?
+  watchSeconds Int        @default(0)
+  completed    Boolean    @default(false)
+  source       ViewSource @default(FEED)
+  createdAt    DateTime   @default(now())
+  video        Video      @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user         User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([videoId])
+  @@index([userId])
+  @@index([sessionId])
+  @@index([createdAt])
+}
+
+model ServerClickEvent {
+  id             String         @id @default(cuid())
+  videoId        String?
+  serverId       String
+  userId         String?
+  sessionId      String?
+  referrerSource ReferrerSource @default(FEED)
+  clickType      String         @default("website")
+  createdAt      DateTime       @default(now())
+  video          Video?         @relation(fields: [videoId], references: [id], onDelete: SetNull)
+  server         Server         @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user           User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([serverId])
+  @@index([videoId])
+  @@index([userId])
+  @@index([sessionId])
+}
+
+model Tag {
+  id      String      @id @default(cuid())
+  name    String      @unique
+  slug    String      @unique
+  servers ServerTag[]
+}
+
+model ServerTag {
+  serverId String
+  tagId    String
+  server   Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  tag      Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([serverId, tagId])
+}
+
+model Comment {
+  id        String        @id @default(cuid())
+  userId    String
+  videoId   String
+  body      String        @db.Text
+  status    CommentStatus @default(VISIBLE)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video     Video         @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+  @@index([userId])
+  @@index([status])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  videoId   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+  @@index([videoId])
+}
+
+model Save {
+  id        String   @id @default(cuid())
+  userId    String
+  videoId   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+  @@index([userId])
+  @@index([videoId])
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  follower    User     @relation("Followers", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model ServerFollow {
+  id        String   @id @default(cuid())
+  userId    String
+  serverId  String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serverId])
+  @@index([userId])
+  @@index([serverId])
+}
+
+model SearchEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  sessionId String?
+  query     String?
+  filters   Json?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([createdAt])
+}
+
+model Report {
+  id         String           @id @default(cuid())
+  reporterId String?
+  targetType ReportTargetType
+  targetId   String
+  reason     ReportReason
+  details    String?          @db.Text
+  status     ReportStatus     @default(OPEN)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  reporter   User?            @relation("ReporterReports", fields: [reporterId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([targetType, targetId])
+}
+
+model AdminAuditLog {
+  id                 String   @id @default(cuid())
+  adminId            String
+  action             String
+  targetType         String
+  targetId           String
+  reason             String?  @db.Text
+  metadata           Json?
+  impersonatedUserId String?
+  createdAt          DateTime @default(now())
+  admin              User     @relation("AdminAuditLogs", fields: [adminId], references: [id], onDelete: Cascade)
+  impersonatedUser   User?    @relation("ImpersonatedAuditLogs", fields: [impersonatedUserId], references: [id], onDelete: SetNull)
+
+  @@index([adminId])
+  @@index([targetType, targetId])
+  @@index([createdAt])
+}
+
+model RecommendationPreference {
+  userId            String   @id
+  tagWeights        Json?
+  serverTypeWeights Json?
+  regionWeights     Json?
+  languageWeights   Json?
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
