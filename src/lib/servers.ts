@@ -1,6 +1,9 @@
 import slugify from "slugify";
 import { prisma } from "@/lib/prisma";
-import { ContentStatus, Prisma, ServerType } from "@/generated/prisma/client";
+import type { ServerSystemKey } from "@/lib/constants";
+import { normalizeMediaUrl } from "@/lib/media-url";
+import { buildServerSystemsWhere } from "@/lib/server-systems";
+import { ContentStatus, GameplayDifficulty, Prisma, SchoolType } from "@/generated/prisma/client";
 
 export async function generateUniqueSlug(name: string, excludeId?: string) {
   const base = slugify(name, { lower: true, strict: true }) || "server";
@@ -18,10 +21,12 @@ export async function generateUniqueSlug(name: string, excludeId?: string) {
 
 export interface ServerFilters {
   q?: string;
-  language?: string;
-  serverType?: string;
-  region?: string;
-  expRate?: string;
+  schoolType?: string;
+  gameplayDifficulty?: string;
+  mainLanguage?: string;
+  originCountry?: string;
+  maxLevel?: number;
+  systems?: ServerSystemKey[];
   launchAfter?: string;
   launchBefore?: string;
   featured?: boolean;
@@ -42,12 +47,19 @@ export function buildServerWhere(
     ];
   }
 
-  if (filters.language) where.language = filters.language;
-  if (filters.region) where.region = filters.region;
-  if (filters.serverType) where.serverType = filters.serverType as ServerType;
-  if (filters.expRate) where.expRate = { contains: filters.expRate, mode: "insensitive" };
+  if (filters.mainLanguage) where.mainLanguage = filters.mainLanguage;
+  if (filters.originCountry) where.originCountry = filters.originCountry;
+  if (filters.schoolType) where.schoolType = filters.schoolType as SchoolType;
+  if (filters.gameplayDifficulty) {
+    where.gameplayDifficulty = filters.gameplayDifficulty as GameplayDifficulty;
+  }
+  if (filters.maxLevel) where.maxLevel = { lte: filters.maxLevel };
   if (filters.featured) where.featured = true;
   if (filters.verified) where.verified = true;
+
+  if (filters.systems?.length) {
+    where.AND = buildServerSystemsWhere(filters.systems);
+  }
 
   if (filters.launchAfter || filters.launchBefore) {
     where.launchDate = {};
@@ -141,6 +153,58 @@ export async function getUserServers(userId: string) {
     },
     orderBy: { createdAt: "asc" },
   });
+}
+
+export function serverDataFromSubmission(data: {
+  name: string;
+  websiteUrl?: string;
+  discordUrl?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  launchDate?: string;
+  memberRole?: string;
+  representsServer: boolean;
+  maxLevel?: number | "" | null;
+  schoolType: string;
+  gameplayDifficulty: string;
+  originCountry: string;
+  mainLanguage: string;
+  supportedLanguages: string[];
+  description?: string;
+  otherSystems?: string;
+  systems?: Partial<Record<ServerSystemKey, boolean>>;
+}) {
+  const systems = data.systems ?? {};
+  return {
+    name: data.name,
+    websiteUrl: data.websiteUrl || null,
+    discordUrl: data.discordUrl || null,
+    logoUrl: data.logoUrl ? normalizeMediaUrl(data.logoUrl) || null : null,
+    bannerUrl: data.bannerUrl ? normalizeMediaUrl(data.bannerUrl) || null : null,
+    launchDate: data.launchDate ? new Date(data.launchDate) : null,
+    representsServer: data.representsServer,
+    maxLevel: typeof data.maxLevel === "number" ? data.maxLevel : null,
+    schoolType: data.schoolType as SchoolType,
+    gameplayDifficulty: data.gameplayDifficulty as GameplayDifficulty,
+    originCountry: data.originCountry,
+    mainLanguage: data.mainLanguage,
+    supportedLanguages: data.supportedLanguages,
+    description: data.description || null,
+    otherSystems: data.otherSystems?.trim() || null,
+    systemAlchemy: systems.systemAlchemy === true,
+    systemScarf: systems.systemScarf === true,
+    systemLycan: systems.systemLycan === true,
+    systemBonus67: systems.systemBonus67 === true,
+    systemOfflineShop: systems.systemOfflineShop === true,
+    systemCostume: systems.systemCostume === true,
+    systemPet: systems.systemPet === true,
+    systemMount: systems.systemMount === true,
+    systemBattlePass: systems.systemBattlePass === true,
+    systemDungeonRanking: systems.systemDungeonRanking === true,
+    systemElement: systems.systemElement === true,
+    systemTalisman: systems.systemTalisman === true,
+    verificationStatus: data.representsServer ? ("PENDING" as const) : ("NONE" as const),
+  };
 }
 
 /** @deprecated Use buildServerWhere */

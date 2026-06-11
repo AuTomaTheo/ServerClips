@@ -8,7 +8,7 @@ export default function PrivacyPage() {
     <Metin2LegalPage title="Privacy Policy">
       <p className="text-sm text-[#6b5a40]">Last updated: {new Date().toLocaleDateString()} (Placeholder)</p>
 
-      <div className="metin2-disclaimer">
+      <div className="app-disclaimer">
         <p>{LEGAL_DISCLAIMER}</p>
       </div>
 

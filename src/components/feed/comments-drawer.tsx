@@ -1,20 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { commentSchema, type CommentInput } from "@/lib/validators/video";
 import { X } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { Metin2Button } from "@/components/metin2/metin2-button";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { CommentThread } from "@/components/comments/comment-thread";
+import type { CommentNode } from "@/types/comments";
+import { countCommentNodes } from "@/types/comments";
 
-interface Comment {
-  id: string;
-  body: string;
-  createdAt: string;
-  user: { id: string; name: string | null; displayName?: string | null; username?: string | null };
+function removeCommentFromTree(nodes: CommentNode[], commentId: string): CommentNode[] {
+  return nodes
+    .filter((n) => n.id !== commentId)
+    .map((n) => ({ ...n, replies: removeCommentFromTree(n.replies, commentId) }));
+}
+
+function updateCommentInTree(
+  nodes: CommentNode[],
+  commentId: string,
+  patch: Partial<Pick<CommentNode, "likes" | "dislikes" | "userReaction">>
+): CommentNode[] {
+  return nodes.map((n) => {
+    if (n.id === commentId) return { ...n, ...patch };
+    return { ...n, replies: updateCommentInTree(n.replies, commentId, patch) };
+  });
 }
 
 export function CommentsDrawer({
@@ -22,6 +35,7 @@ export function CommentsDrawer({
   videoTitle,
   initialCount,
   isAuthenticated,
+  currentUserId,
   open,
   onClose,
   onAuthRequired,
@@ -30,31 +44,65 @@ export function CommentsDrawer({
   videoTitle: string;
   initialCount: number;
   isAuthenticated: boolean;
+  currentUserId?: string;
   open: boolean;
   onClose: () => void;
   onAuthRequired?: () => void;
 }) {
   const router = useRouter();
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [comments, setComments] = useState<CommentNode[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyBody, setReplyBody] = useState("");
+  const [postingReply, setPostingReply] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const form = useForm<CommentInput>({
     resolver: zodResolver(commentSchema),
     defaultValues: { body: "" },
   });
 
+  const loadComments = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/videos/${videoId}/comments`);
+      const data = await res.json();
+      if (data.comments) {
+        setComments(data.comments);
+        setTotal(data.total ?? countCommentNodes(data.comments));
+      } else if (Array.isArray(data)) {
+        setComments(data);
+        setTotal(data.length);
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      setLoading(false);
+    }
+  }, [videoId]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
-    setLoading(true);
-    fetch(`/api/videos/${videoId}/comments`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) setComments(data);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [open, videoId]);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    loadComments();
+    setReplyingToId(null);
+    setReplyBody("");
+  }, [open, loadComments]);
 
   async function onSubmit(data: CommentInput) {
     if (!isAuthenticated) {
@@ -73,67 +121,132 @@ export function CommentsDrawer({
       setError(result.error ?? "Failed to post");
       return;
     }
-    setComments((prev) => [result, ...prev]);
+    await loadComments();
     form.reset();
   }
 
-  if (!open) return null;
+  async function submitReply(parentId: string) {
+    if (!isAuthenticated || replyBody.trim().length < 2) return;
+    setPostingReply(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/videos/${videoId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: replyBody.trim(), parentId }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        setError(result.error ?? "Failed to reply");
+        return;
+      }
+      setReplyingToId(null);
+      setReplyBody("");
+      await loadComments();
+    } finally {
+      setPostingReply(false);
+    }
+  }
 
-  const countLabel =
-    comments.length > 0 ? comments.length : initialCount > 0 ? initialCount : null;
+  async function deleteComment(commentId: string) {
+    setDeletingId(commentId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/comments/${commentId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const result = await res.json();
+        setError(result.error ?? "Failed to delete");
+        return;
+      }
+      setComments((prev) => removeCommentFromTree(prev, commentId));
+      setTotal((t) => Math.max(0, t - 1));
+      await loadComments();
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center">
+  async function reactToComment(commentId: string, type: "LIKE" | "DISLIKE") {
+    const res = await fetch(`/api/comments/${commentId}/reaction`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    setComments((prev) =>
+      updateCommentInTree(prev, commentId, {
+        likes: data.likes,
+        dislikes: data.dislikes,
+        userReaction: data.userReaction,
+      })
+    );
+  }
+
+  if (!open || !mounted) return null;
+
+  const countLabel = total > 0 ? total : initialCount > 0 ? initialCount : null;
+
+  const drawer = (
+    <div className="fixed inset-0 z-[100] flex items-end justify-center">
       <div className="absolute inset-0 bg-black/70" onClick={onClose} />
-      <div className="relative flex max-h-[70vh] w-full max-w-lg flex-col rounded-t-2xl border border-[#5c3d1e] bg-[#1a1208]">
-        <div className="flex items-center justify-between border-b border-[#5c3d1e] px-4 py-3">
-          <h3 className="font-display text-metin2-gold">
+      <div className="relative flex max-h-[70vh] w-full max-w-lg flex-col rounded-t-2xl border border-zinc-800 bg-zinc-950">
+        <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
+          <h3 className="text-sm font-semibold text-white">
             Comments{countLabel != null ? ` (${countLabel})` : ""}
           </h3>
-          <button onClick={onClose} className="rounded p-1 text-metin2-parchment hover:bg-black/30">
+          <button onClick={onClose} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-900 hover:text-white">
             <X className="h-5 w-5" />
           </button>
         </div>
-        <p className="px-4 py-2 text-xs text-metin2-parchment/60">{videoTitle}</p>
+        <p className="px-4 py-2 text-xs text-zinc-500">{videoTitle}</p>
         <div className="flex-1 overflow-y-auto px-4 py-2">
           {loading ? (
-            <p className="text-center text-sm text-metin2-parchment/60">Loading...</p>
+            <p className="text-center text-sm text-zinc-500">Loading...</p>
           ) : comments.length === 0 ? (
-            <p className="text-center text-sm text-metin2-parchment/60">No comments yet.</p>
+            <p className="text-center text-sm text-zinc-500">No comments yet.</p>
           ) : (
-            <div className="space-y-4">
-              {comments.map((c) => (
-                <div key={c.id} className="border-b border-[#5c3d1e]/40 pb-3 last:border-0">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-sm font-medium text-metin2-gold">
-                      {c.user.displayName ?? c.user.name ?? "User"}
-                    </span>
-                    <span className="text-xs text-metin2-parchment/50">
-                      {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-sm text-metin2-parchment/90">{c.body}</p>
-                </div>
-              ))}
-            </div>
+            <CommentThread
+              comments={comments}
+              variant="feed"
+              isAuthenticated={isAuthenticated}
+              currentUserId={currentUserId}
+              deletingId={deletingId}
+              replyingToId={replyingToId}
+              replyBody={replyBody}
+              postingReply={postingReply}
+              onReplyClick={(id) => {
+                setReplyingToId(id);
+                setReplyBody("");
+              }}
+              onReplyCancel={() => {
+                setReplyingToId(null);
+                setReplyBody("");
+              }}
+              onReplyBodyChange={setReplyBody}
+              onReplySubmit={submitReply}
+              onDelete={deleteComment}
+              onReaction={reactToComment}
+              onAuthRequired={onAuthRequired}
+            />
           )}
         </div>
-        <div className="border-t border-[#5c3d1e] p-4">
+        <div className="border-t border-zinc-800 p-4">
           {isAuthenticated ? (
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex gap-2">
               <Textarea
                 placeholder="Add a comment..."
                 rows={2}
-                className="metin2-input min-h-0 flex-1 resize-none"
+                className="app-input min-h-0 flex-1 resize-none"
                 {...form.register("body")}
               />
-              <Metin2Button type="submit" className="self-end text-sm">
+              <Button type="submit" size="sm" className="self-end">
                 Post
-              </Metin2Button>
+              </Button>
             </form>
           ) : (
-            <p className="text-center text-sm text-metin2-parchment/70">
-              <a href="/login" className="text-metin2-gold hover:underline">Log in</a> to comment
+            <p className="text-center text-sm text-zinc-500">
+              <a href="/login" className="text-red-400 hover:underline">Log in</a> to comment
             </p>
           )}
           {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
@@ -141,4 +254,6 @@ export function CommentsDrawer({
       </div>
     </div>
   );
+
+  return createPortal(drawer, document.body);
 }

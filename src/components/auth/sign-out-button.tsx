@@ -1,16 +1,17 @@
 "use client";
 
 import { signOut } from "next-auth/react";
-import { Metin2Button } from "@/components/metin2/metin2-button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function SignOutButton({ className }: { className?: string }) {
   return (
-    <Metin2Button
+    <button
       type="button"
-      className={className}
+      className={cn(buttonVariants({ variant: "ghost", size: "sm" }), className)}
       onClick={() => signOut({ callbackUrl: "/" })}
     >
       Sign out
-    </Metin2Button>
+    </button>
   );
 }

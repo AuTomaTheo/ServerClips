@@ -6,7 +6,7 @@ export const metadata = { title: "Copyright / Takedown Policy" };
 export default function CopyrightPage() {
   return (
     <Metin2LegalPage title="Copyright & Takedown Policy">
-      <div className="metin2-disclaimer">
+      <div className="app-disclaimer">
         <p>{LEGAL_DISCLAIMER}</p>
       </div>
 

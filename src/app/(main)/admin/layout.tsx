@@ -20,15 +20,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="mx-auto flex max-w-7xl gap-6 px-4 py-8 sm:px-6">
       <aside className="hidden w-52 shrink-0 lg:block">
-        <nav className="metin2-frame sticky top-24">
-          <div className="metin2-title-bar font-display text-sm">Moderation</div>
-          <div className="metin2-wood-panel space-y-0 p-0">
+        <nav className="app-card sticky top-20 overflow-hidden">
+          <div className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold text-white">
+            Moderation
+          </div>
+          <div className="space-y-0.5 p-2">
             {NAV.filter((n) => !n.adminOnly || isAdmin).map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn("metin2-nav-item block")}
-              >
+              <Link key={item.href} href={item.href} className={cn("app-nav-item block")}>
                 {item.label}
               </Link>
             ))}

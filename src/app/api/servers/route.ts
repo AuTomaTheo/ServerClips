@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { listingSchema } from "@/lib/validators/listing";
-import { generateUniqueSlug, syncServerTags } from "@/lib/servers";
-import { sanitizeRichText } from "@/lib/sanitize";
+import { serverSubmissionSchema } from "@/lib/validators/server-submission";
+import { generateUniqueSlug, serverDataFromSubmission } from "@/lib/servers";
 import { isCreator } from "@/lib/permissions";
-import type { ServerType } from "@/generated/prisma/client";
+import type { ServerMemberRole } from "@/generated/prisma/client";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -18,7 +17,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const parsed = listingSchema.safeParse(body);
+  const parsed = serverSubmissionSchema.safeParse(body);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     const field = issue?.path?.join(".") ?? "input";
@@ -31,22 +30,13 @@ export async function POST(req: Request) {
 
   const data = parsed.data;
   const slug = await generateUniqueSlug(data.name);
+  const serverFields = serverDataFromSubmission(data);
 
   const server = await prisma.$transaction(async (tx) => {
     const created = await tx.server.create({
       data: {
-        name: data.name,
+        ...serverFields,
         slug,
-        description: sanitizeRichText(data.description),
-        websiteUrl: data.websiteUrl || null,
-        discordUrl: data.discordUrl || null,
-        region: data.region,
-        language: data.language,
-        serverType: data.serverType as ServerType,
-        expRate: data.expRate,
-        yangRate: data.yangRate,
-        dropRate: data.dropRate,
-        launchDate: data.launchDate ? new Date(data.launchDate) : null,
         status: "PENDING",
       },
     });
@@ -55,16 +45,12 @@ export async function POST(req: Request) {
       data: {
         serverId: created.id,
         userId: session.user.id,
-        role: "OWNER",
+        role: (data.memberRole ?? "OWNER") as ServerMemberRole,
       },
     });
 
     return created;
   });
-
-  if (data.tags) {
-    await syncServerTags(server.id, data.tags);
-  }
 
   return NextResponse.json({ id: server.id, slug: server.slug });
 }

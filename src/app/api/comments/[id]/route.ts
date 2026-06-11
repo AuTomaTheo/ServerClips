@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { canModerateContent } from "@/lib/permissions";
 import { createAuditLog } from "@/lib/audit";
 import { incrementVideoMetric } from "@/lib/analytics";
+import { softDeleteCommentTree } from "@/lib/comments";
 
 export async function DELETE(
   _req: Request,
@@ -30,11 +31,8 @@ export async function DELETE(
   }
 
   if (comment.status !== "DELETED") {
-    await prisma.comment.update({
-      where: { id: comment.id },
-      data: { status: "DELETED" },
-    });
-    await incrementVideoMetric(comment.videoId, "comments", -1);
+    const deletedCount = await softDeleteCommentTree(comment.id, comment.videoId);
+    await incrementVideoMetric(comment.videoId, "comments", -deletedCount);
   }
 
   if (isMod && !isOwner) {

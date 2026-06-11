@@ -9,7 +9,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!["CREATOR", "MODERATOR", "ADMIN"].includes(session.user.role)) {
+  const formData = await req.formData();
+  const kind = formData.get("kind") as "image" | "video" | null;
+
+  const canUpload =
+    ["USER", "CREATOR", "MODERATOR", "ADMIN"].includes(session.user.role);
+
+  if (!canUpload) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -18,9 +24,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Too many uploads" }, { status: 429 });
   }
 
-  const formData = await req.formData();
   const file = formData.get("file") as File | null;
-  const kind = formData.get("kind") as "image" | "video" | null;
 
   if (!file || !kind || !["image", "video"].includes(kind)) {
     return NextResponse.json({ error: "Invalid upload" }, { status: 400 });

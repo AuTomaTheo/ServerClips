@@ -14,9 +14,16 @@ export type VideoOutput = z.infer<typeof videoSchema>;
 
 export const commentSchema = z.object({
   body: z.string().min(2).max(1000),
+  parentId: z.string().optional(),
 });
 
 export type CommentInput = z.infer<typeof commentSchema>;
+
+export const commentReactionSchema = z.object({
+  type: z.enum(["LIKE", "DISLIKE"]),
+});
+
+export type CommentReactionInput = z.infer<typeof commentReactionSchema>;
 
 export const reportSchema = z.object({
   reason: z.enum([

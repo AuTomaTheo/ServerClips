@@ -1,39 +1,41 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { Shield, LayoutDashboard, Compass, Play, Server } from "lucide-react";
-import { Metin2Logo } from "@/components/metin2/metin2-logo";
-import { Metin2Button } from "@/components/metin2/metin2-button";
+import { Shield, LayoutDashboard, Compass, Play, Server, Plus } from "lucide-react";
+import { AppLogo } from "@/components/layout/app-logo";
+import { buttonVariants } from "@/components/ui/button";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { cn } from "@/lib/utils";
 
 export async function Navbar() {
   const session = await auth();
   const user = session?.user;
 
   return (
-    <header className="border-b-2 border-metin2-wood bg-gradient-to-b from-metin2-woodDark to-metin2-bg shadow-lg">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-        <Metin2Logo />
+    <header className="sticky top-0 z-40 border-b border-zinc-800/80 bg-black/90 backdrop-blur-xl">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6">
+        <AppLogo size="md" />
 
-        <nav className="hidden items-center gap-1 text-sm md:flex">
+        <nav className="hidden items-center gap-1 md:flex">
           <Link
             href="/"
-            className="metin2-btn-ghost inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-metin2-parchment hover:text-metin2-goldLight"
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-white"
           >
-            <Play className="h-4 w-4 text-metin2-gold" />
+            <Play className="h-4 w-4 text-red-500" />
             Feed
           </Link>
           <Link
             href="/explore"
-            className="metin2-btn-ghost inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-metin2-parchment hover:text-metin2-goldLight"
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-white"
           >
-            <Compass className="h-4 w-4 text-metin2-gold" />
+            <Compass className="h-4 w-4 text-red-500" />
             Explore
           </Link>
           <Link
-            href="/legal/terms"
-            className="rounded px-3 py-1.5 text-metin2-parchment/70 hover:text-metin2-goldLight"
+            href="/submit-server"
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-white"
           >
-            Terms
+            <Server className="h-4 w-4 text-red-500" />
+            Submit Server
           </Link>
         </nav>
 
@@ -42,35 +44,47 @@ export async function Navbar() {
             <>
               {(user.role === "CREATOR" || user.role === "MODERATOR" || user.role === "ADMIN") && (
                 <>
-                  <Metin2Button href="/studio" variant="ghost" className="text-xs sm:text-sm">
+                  <Link
+                    href="/studio/videos/new"
+                    className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden sm:inline">Upload</span>
+                  </Link>
+                  <Link
+                    href="/studio"
+                    className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+                  >
                     <LayoutDashboard className="h-4 w-4" />
                     <span className="hidden sm:inline">Studio</span>
-                  </Metin2Button>
-                  <Metin2Button href="/server-dashboard" variant="ghost" className="text-xs sm:text-sm">
-                    <Server className="h-4 w-4" />
-                    <span className="hidden sm:inline">Servers</span>
-                  </Metin2Button>
+                  </Link>
                 </>
               )}
               {(user.role === "MODERATOR" || user.role === "ADMIN") && (
-                <Metin2Button href="/admin" variant="ghost" className="text-xs sm:text-sm">
+                <Link
+                  href="/admin"
+                  className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+                >
                   <Shield className="h-4 w-4" />
                   <span className="hidden sm:inline">Admin</span>
-                </Metin2Button>
+                </Link>
               )}
-              <Metin2Button href="/account" variant="ghost" className="text-xs sm:text-sm">
-                Account
-              </Metin2Button>
+              <Link
+                href={user.username ? `/u/${user.username}` : "/account"}
+                className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+              >
+                Profile
+              </Link>
               <SignOutButton className="text-xs sm:text-sm" />
             </>
           ) : (
             <>
-              <Metin2Button href="/login" variant="ghost" className="text-xs sm:text-sm">
+              <Link href="/login" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
                 Log in
-              </Metin2Button>
-              <Metin2Button href="/register" variant="primary" className="text-xs sm:text-sm">
+              </Link>
+              <Link href="/register" className={cn(buttonVariants({ size: "sm" }))}>
                 Sign up
-              </Metin2Button>
+              </Link>
             </>
           )}
         </div>

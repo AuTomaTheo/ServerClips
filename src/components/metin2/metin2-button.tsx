@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Metin2ButtonProps {
@@ -12,6 +13,7 @@ interface Metin2ButtonProps {
   external?: boolean;
   type?: "button" | "submit";
   disabled?: boolean;
+  loading?: boolean;
 }
 
 export function Metin2Button({
@@ -23,14 +25,23 @@ export function Metin2Button({
   external,
   type = "button",
   disabled,
+  loading,
 }: Metin2ButtonProps) {
+  const isDisabled = disabled || loading;
   const classes = cn(
     "metin2-btn inline-flex items-center justify-center gap-2 font-semibold transition-all",
     variant === "primary" && "metin2-btn-primary",
     variant === "gold" && "metin2-btn-gold",
     variant === "ghost" && "metin2-btn-ghost",
-    disabled && "pointer-events-none opacity-50",
+    isDisabled && "pointer-events-none opacity-50",
     className
+  );
+
+  const content = (
+    <>
+      {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+      {children}
+    </>
   );
 
   if (href) {
@@ -39,16 +50,17 @@ export function Metin2Button({
         href={href}
         className={classes}
         onClick={onClick}
+        aria-disabled={isDisabled}
         {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       >
-        {children}
+        {content}
       </Link>
     );
   }
 
   return (
-    <button type={type} onClick={onClick} className={classes} disabled={disabled}>
-      {children}
+    <button type={type} onClick={onClick} className={classes} disabled={isDisabled}>
+      {content}
     </button>
   );
 }

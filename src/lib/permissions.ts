@@ -11,9 +11,26 @@ export type ServerMemberContext = {
   role: ServerMemberRole;
 };
 
-const PROFILE_EDIT_ROLES: ServerMemberRole[] = ["OWNER", "ADMIN"];
-const VIDEO_MANAGE_ROLES: ServerMemberRole[] = ["OWNER", "ADMIN", "PROMOTER"];
-const ANALYTICS_ROLES: ServerMemberRole[] = ["OWNER", "ADMIN", "ANALYST"];
+const PROFILE_EDIT_ROLES: ServerMemberRole[] = [
+  "OWNER",
+  "CO_OWNER",
+  "ADMINISTRATOR",
+  "COMMUNITY_MANAGER",
+];
+const VIDEO_MANAGE_ROLES: ServerMemberRole[] = [
+  "OWNER",
+  "CO_OWNER",
+  "ADMINISTRATOR",
+  "PROMOTER",
+  "CONTENT_CREATOR",
+];
+const ANALYTICS_ROLES: ServerMemberRole[] = [
+  "OWNER",
+  "CO_OWNER",
+  "ADMINISTRATOR",
+  "COMMUNITY_MANAGER",
+  "CONTENT_CREATOR",
+];
 
 export function isAdmin(user: { role: Role }) {
   return user.role === "ADMIN";
@@ -56,12 +73,11 @@ export function isServerMember(member?: ServerMemberContext | null): member is S
 }
 
 export function isServerOwner(member?: ServerMemberContext | null) {
-  return member?.role === "OWNER";
+  return member?.role === "OWNER" || member?.role === "CO_OWNER";
 }
 
-/** Full server control: team, verification, billing (future), settings. */
 export function canManageServer(member?: ServerMemberContext | null) {
-  return member?.role === "OWNER";
+  return member?.role === "OWNER" || member?.role === "CO_OWNER";
 }
 
 export function canEditServerProfile(member?: ServerMemberContext | null) {
@@ -76,7 +92,6 @@ export function canViewServerAnalytics(member?: ServerMemberContext | null) {
   return member ? ANALYTICS_ROLES.includes(member.role) : false;
 }
 
-/** Platform moderators/admins bypass server-member checks. */
 export function canBypassServerPermissions(user: { role: Role }) {
   return isModerator(user);
 }

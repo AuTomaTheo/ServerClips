@@ -6,7 +6,7 @@ export const metadata = { title: "Community Guidelines" };
 export default function GuidelinesPage() {
   return (
     <Metin2LegalPage title="Community Guidelines">
-      <div className="metin2-disclaimer">
+      <div className="app-disclaimer">
         <p>{LEGAL_DISCLAIMER}</p>
       </div>
 

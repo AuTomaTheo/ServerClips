@@ -1,6 +1,7 @@
 import { ContentStatus, Prisma, VideoVisibility } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import type { FeedItem, FeedMetrics } from "@/types/feed";
+import type { FeedFilters, FeedItem, FeedMetrics } from "@/types/feed";
+import { buildFeedWhere } from "@/lib/search-ranking";
 
 const emptyMetrics = (): FeedMetrics => ({
   views: 0,
@@ -32,19 +33,34 @@ export const videoInclude = {
       id: true,
       name: true,
       slug: true,
+      logoUrl: true,
+      bannerUrl: true,
       websiteUrl: true,
       discordUrl: true,
-      region: true,
-      language: true,
-      serverType: true,
-      expRate: true,
-      yangRate: true,
-      dropRate: true,
+      originCountry: true,
+      mainLanguage: true,
+      supportedLanguages: true,
+      schoolType: true,
+      gameplayDifficulty: true,
+      maxLevel: true,
       launchDate: true,
       featured: true,
       verified: true,
       verificationStatus: true,
       status: true,
+      systemAlchemy: true,
+      systemScarf: true,
+      systemLycan: true,
+      systemBonus67: true,
+      systemOfflineShop: true,
+      systemCostume: true,
+      systemPet: true,
+      systemMount: true,
+      systemBattlePass: true,
+      systemDungeonRanking: true,
+      systemElement: true,
+      systemTalisman: true,
+      otherSystems: true,
       tags: { include: { tag: true } },
     },
   },
@@ -61,39 +77,28 @@ export function publicVideoWhere(): Prisma.VideoWhereInput {
   };
 }
 
-export function buildVideoFeedWhere(filters: {
-  q?: string;
-  serverType?: string;
-  language?: string;
-  region?: string;
-  verifiedOnly?: boolean;
-}): Prisma.VideoWhereInput {
-  const where: Prisma.VideoWhereInput = { ...publicVideoWhere() };
-
-  if (filters.serverType || filters.language || filters.region || filters.verifiedOnly) {
-    where.server = {};
-    if (filters.serverType) {
-      where.server.serverType = filters.serverType as Prisma.EnumServerTypeFilter;
-    }
-    if (filters.language) where.server.language = filters.language;
-    if (filters.region) where.server.region = filters.region;
-    if (filters.verifiedOnly) where.server.verified = true;
-  }
-
+export function buildVideoFeedWhere(filters: FeedFilters): Prisma.VideoWhereInput {
+  const { where } = buildFeedWhere(filters);
   if (filters.q) {
-    where.OR = [
-      { title: { contains: filters.q, mode: "insensitive" } },
-      { description: { contains: filters.q, mode: "insensitive" } },
-      { creator: { username: { contains: filters.q, mode: "insensitive" } } },
-      { server: { name: { contains: filters.q, mode: "insensitive" } } },
-      {
-        server: {
-          tags: { some: { tag: { name: { contains: filters.q, mode: "insensitive" } } } },
+    return {
+      AND: [
+        where,
+        {
+          OR: [
+            { title: { contains: filters.q, mode: "insensitive" } },
+            { description: { contains: filters.q, mode: "insensitive" } },
+            { creator: { username: { contains: filters.q, mode: "insensitive" } } },
+            { server: { name: { contains: filters.q, mode: "insensitive" } } },
+            {
+              server: {
+                tags: { some: { tag: { name: { contains: filters.q, mode: "insensitive" } } } },
+              },
+            },
+          ],
         },
-      },
-    ];
+      ],
+    };
   }
-
   return where;
 }
 
@@ -170,17 +175,32 @@ export function mapVideoToFeedItem(
           id: server.id,
           name: server.name,
           slug: server.slug,
+          logoUrl: server.logoUrl,
+          bannerUrl: server.bannerUrl,
           websiteUrl: server.websiteUrl,
           discordUrl: server.discordUrl,
-          region: server.region,
-          language: server.language,
-          serverType: server.serverType,
-          expRate: server.expRate,
-          yangRate: server.yangRate,
-          dropRate: server.dropRate,
+          originCountry: server.originCountry,
+          mainLanguage: server.mainLanguage,
+          supportedLanguages: server.supportedLanguages,
+          schoolType: server.schoolType,
+          gameplayDifficulty: server.gameplayDifficulty,
+          maxLevel: server.maxLevel,
           launchDate: server.launchDate?.toISOString() ?? null,
           verified: server.verified,
           tags: server.tags.map((t) => t.tag.name),
+          systemAlchemy: server.systemAlchemy,
+          systemScarf: server.systemScarf,
+          systemLycan: server.systemLycan,
+          systemBonus67: server.systemBonus67,
+          systemOfflineShop: server.systemOfflineShop,
+          systemCostume: server.systemCostume,
+          systemPet: server.systemPet,
+          systemMount: server.systemMount,
+          systemBattlePass: server.systemBattlePass,
+          systemDungeonRanking: server.systemDungeonRanking,
+          systemElement: server.systemElement,
+          systemTalisman: server.systemTalisman,
+          otherSystems: server.otherSystems,
         }
       : null,
   };

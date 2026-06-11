@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { listingSchema } from "@/lib/validators/listing";
-import { generateUniqueSlug, syncServerTags, getServerMember } from "@/lib/servers";
+import { serverSubmissionSchema } from "@/lib/validators/server-submission";
+import { generateUniqueSlug, getServerMember, serverDataFromSubmission } from "@/lib/servers";
 import { canEditServerProfile, canBypassServerPermissions } from "@/lib/permissions";
-import { sanitizeRichText } from "@/lib/sanitize";
-import type { ServerType } from "@/generated/prisma/client";
 
 export async function PATCH(
   req: Request,
@@ -30,7 +28,7 @@ export async function PATCH(
   }
 
   const body = await req.json();
-  const parsed = listingSchema.safeParse(body);
+  const parsed = serverSubmissionSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       {
@@ -48,30 +46,19 @@ export async function PATCH(
       ? await generateUniqueSlug(data.name, server.id)
       : server.slug;
 
+  const serverFields = serverDataFromSubmission(data);
+
   const updated = await prisma.server.update({
     where: { id: server.id },
     data: {
+      ...serverFields,
       name: data.name,
       slug,
-      description: sanitizeRichText(data.description),
-      websiteUrl: data.websiteUrl || null,
-      discordUrl: data.discordUrl || null,
-      region: data.region,
-      language: data.language,
-      serverType: data.serverType as ServerType,
-      expRate: data.expRate,
-      yangRate: data.yangRate,
-      dropRate: data.dropRate,
-      launchDate: data.launchDate ? new Date(data.launchDate) : null,
       ...(session.user.role !== "ADMIN" && session.user.role !== "MODERATOR"
         ? { status: "PENDING" as const }
         : {}),
     },
   });
-
-  if (data.tags !== undefined) {
-    await syncServerTags(updated.id, data.tags);
-  }
 
   return NextResponse.json({ id: updated.id, slug: updated.slug });
 }

@@ -1,20 +1,13 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Metin2Frame } from "@/components/metin2/metin2-frame";
+import { ProfileVideoGrid, type ProfileGridVideo } from "@/components/profile/profile-video-grid";
 
 const TABS = [
   { id: "videos", label: "Videos" },
-  { id: "liked", label: "Liked" },
   { id: "saved", label: "Saved" },
+  { id: "liked", label: "Liked" },
   { id: "servers", label: "Servers" },
 ] as const;
-
-type ProfileVideo = {
-  id: string;
-  title: string;
-  metrics?: { views: number; likes?: number } | null;
-  _count: { likes: number };
-};
 
 export function ProfileTabs({
   username,
@@ -32,10 +25,17 @@ export function ProfileTabs({
   isOwner: boolean;
   likedPublic: boolean;
   savedPublic: boolean;
-  videos: ProfileVideo[];
-  likedVideos: ProfileVideo[];
-  savedVideos: ProfileVideo[];
-  servers: { id: string; name: string; slug: string; serverType: string; region: string }[];
+  videos: ProfileGridVideo[];
+  likedVideos: ProfileGridVideo[];
+  savedVideos: ProfileGridVideo[];
+  servers: {
+    id: string;
+    name: string;
+    slug: string;
+    schoolType: string;
+    gameplayDifficulty: string;
+    originCountry: string;
+  }[];
 }) {
   const visibleTabs = TABS.filter((t) => {
     if (t.id === "saved") return savedPublic || isOwner;
@@ -43,22 +43,18 @@ export function ProfileTabs({
     return true;
   });
 
-  function getViews(v: ProfileVideo) {
-    return v.metrics?.views ?? 0;
-  }
-
   return (
     <>
-      <nav className="mb-4 flex gap-1 border-b border-metin2-wood">
+      <nav className="mb-4 flex border-b border-zinc-800">
         {visibleTabs.map((tab) => (
           <Link
             key={tab.id}
             href={`/u/${username}?tab=${tab.id}`}
             className={cn(
-              "px-4 py-2 text-sm font-medium transition-colors",
+              "flex-1 py-3 text-center text-sm font-semibold transition-colors",
               activeTab === tab.id
-                ? "border-b-2 border-metin2-gold text-metin2-gold"
-                : "text-metin2-parchment/70 hover:text-metin2-parchment"
+                ? "border-b-2 border-red-500 text-red-400"
+                : "text-zinc-500 hover:text-zinc-300"
             )}
           >
             {tab.label}
@@ -67,68 +63,38 @@ export function ProfileTabs({
       </nav>
 
       {activeTab === "videos" && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {videos.length === 0 ? (
-            <p className="text-metin2-parchment/60">No public videos yet.</p>
-          ) : (
-            videos.map((v) => (
-              <Metin2Frame key={v.id} variant="wood">
-                <Link href={`/?v=${v.id}`} className="block">
-                  <p className="font-medium text-metin2-gold">{v.title}</p>
-                  <p className="text-xs text-metin2-parchment/60">
-                    {getViews(v)} views · {v._count.likes} likes
-                  </p>
-                </Link>
-              </Metin2Frame>
-            ))
-          )}
-        </div>
+        <ProfileVideoGrid
+          videos={videos}
+          emptyMessage={isOwner ? "No videos yet. Upload your first promo!" : "No public videos yet."}
+        />
       )}
 
       {activeTab === "liked" && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {likedVideos.length === 0 ? (
-            <p className="text-metin2-parchment/60">No liked videos.</p>
-          ) : (
-            likedVideos.map((v) => (
-              <Metin2Frame key={v.id} variant="wood">
-                <Link href={`/?v=${v.id}`} className="block">
-                  <p className="font-medium text-metin2-gold">{v.title}</p>
-                </Link>
-              </Metin2Frame>
-            ))
-          )}
-        </div>
+        <ProfileVideoGrid videos={likedVideos} emptyMessage="No liked videos." />
       )}
 
       {activeTab === "saved" && (savedPublic || isOwner) && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {savedVideos.length === 0 ? (
-            <p className="text-metin2-parchment/60">No saved videos.</p>
-          ) : (
-            savedVideos.map((v) => (
-              <Metin2Frame key={v.id} variant="wood">
-                <Link href={`/?v=${v.id}`} className="block">
-                  <p className="font-medium text-metin2-gold">{v.title}</p>
-                </Link>
-              </Metin2Frame>
-            ))
-          )}
-        </div>
+        <ProfileVideoGrid videos={savedVideos} emptyMessage="No saved videos." />
       )}
 
       {activeTab === "servers" && (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 py-4 sm:grid-cols-2">
           {servers.length === 0 ? (
-            <p className="text-metin2-parchment/60">No server profiles.</p>
+            <p className="col-span-full py-8 text-center text-sm text-zinc-500">
+              {isOwner ? "No server profiles yet. Submit a server!" : "No server profiles."}
+            </p>
           ) : (
             servers.map((s) => (
-              <Metin2Frame key={s.id} variant="wood">
-                <Link href={`/server/${s.slug}`} className="block">
-                  <p className="font-medium text-metin2-gold">{s.name}</p>
-                  <p className="text-xs text-metin2-parchment/60">{s.serverType} · {s.region}</p>
-                </Link>
-              </Metin2Frame>
+              <Link
+                key={s.id}
+                href={`/server/${s.slug}`}
+                className="app-card block p-4 transition-colors hover:border-zinc-700"
+              >
+                <p className="font-semibold text-white">{s.name}</p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  {s.schoolType} · {s.gameplayDifficulty} · {s.originCountry}
+                </p>
+              </Link>
             ))
           )}
         </div>

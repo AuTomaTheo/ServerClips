@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireCreator, canManageVideo } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { Metin2Frame } from "@/components/metin2/metin2-frame";
 import { VideoUploadForm } from "@/components/creator/video-upload-form";
 
 export default async function EditVideoPage({ params }: { params: { id: string } }) {
@@ -16,7 +15,8 @@ export default async function EditVideoPage({ params }: { params: { id: string }
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-      <Metin2Frame title="Edit video">
+      <div className="app-card p-6">
+        <h1 className="mb-6 text-xl font-bold text-white">Edit video</h1>
         <VideoUploadForm
           servers={memberships.map((m) => m.server)}
           videoId={video.id}
@@ -28,7 +28,7 @@ export default async function EditVideoPage({ params }: { params: { id: string }
             serverId: video.serverId ?? "",
           }}
         />
-      </Metin2Frame>
+      </div>
     </div>
   );
 }

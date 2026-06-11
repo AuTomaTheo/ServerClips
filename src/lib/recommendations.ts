@@ -7,11 +7,11 @@ import {
 } from "@/lib/videos";
 import type { FeedFilters } from "@/types/feed";
 
-/** Tunable weights from product spec — adjust here without touching scoring logic. */
 export const RECOMMENDATION_SCORES = {
   FOLLOWED_CREATOR: 50,
   FOLLOWED_SERVER: 50,
-  SERVER_TYPE_MATCH: 30,
+  SCHOOL_TYPE_MATCH: 30,
+  DIFFICULTY_MATCH: 25,
   LANGUAGE_REGION_MATCH: 25,
   SEARCH_TERM_MATCH: 20,
   HIGH_COMPLETION: 15,
@@ -45,8 +45,9 @@ interface RecommendationContext {
   followedCreatorIds: Set<string>;
   followedServerIds: Set<string>;
   watchCounts: Map<string, number>;
-  serverTypeWeights: WeightMap;
-  regionWeights: WeightMap;
+  schoolTypeWeights: WeightMap;
+  difficultyWeights: WeightMap;
+  originCountryWeights: WeightMap;
   languageWeights: WeightMap;
   tagWeights: WeightMap;
   searchTokens: string[];
@@ -83,7 +84,13 @@ function parseJsonWeights(value: unknown): WeightMap {
 
 async function loadEngagedServerTraits(videoIds: string[]) {
   if (videoIds.length === 0) {
-    return { serverTypeWeights: {}, regionWeights: {}, languageWeights: {}, tagWeights: {} };
+    return {
+      schoolTypeWeights: {},
+      difficultyWeights: {},
+      originCountryWeights: {},
+      languageWeights: {},
+      tagWeights: {},
+    };
   }
 
   const videos = await prisma.video.findMany({
@@ -91,32 +98,35 @@ async function loadEngagedServerTraits(videoIds: string[]) {
     select: {
       server: {
         select: {
-          serverType: true,
-          region: true,
-          language: true,
+          schoolType: true,
+          gameplayDifficulty: true,
+          originCountry: true,
+          mainLanguage: true,
           tags: { select: { tag: { select: { name: true } } } },
         },
       },
     },
   });
 
-  const serverTypeWeights: WeightMap = {};
-  const regionWeights: WeightMap = {};
+  const schoolTypeWeights: WeightMap = {};
+  const difficultyWeights: WeightMap = {};
+  const originCountryWeights: WeightMap = {};
   const languageWeights: WeightMap = {};
   const tagWeights: WeightMap = {};
 
   for (const video of videos) {
     const server = video.server;
     if (!server) continue;
-    bump(serverTypeWeights, server.serverType, 2);
-    bump(regionWeights, server.region, 2);
-    bump(languageWeights, server.language, 2);
+    bump(schoolTypeWeights, server.schoolType, 2);
+    bump(difficultyWeights, server.gameplayDifficulty, 2);
+    bump(originCountryWeights, server.originCountry, 2);
+    bump(languageWeights, server.mainLanguage, 2);
     for (const tag of server.tags) {
       bump(tagWeights, normalize(tag.tag.name), 1);
     }
   }
 
-  return { serverTypeWeights, regionWeights, languageWeights, tagWeights };
+  return { schoolTypeWeights, difficultyWeights, originCountryWeights, languageWeights, tagWeights };
 }
 
 async function buildRecommendationContext(
@@ -128,8 +138,9 @@ async function buildRecommendationContext(
   const followedServerIds = new Set<string>();
   const watchCounts = new Map<string, number>();
 
-  let serverTypeWeights: WeightMap = {};
-  let regionWeights: WeightMap = {};
+  let schoolTypeWeights: WeightMap = {};
+  let difficultyWeights: WeightMap = {};
+  let originCountryWeights: WeightMap = {};
   let languageWeights: WeightMap = {};
   let tagWeights: WeightMap = {};
   const searchTokens = new Set<string>(tokenize(query));
@@ -198,8 +209,12 @@ async function buildRecommendationContext(
     }
 
     if (preference) {
-      serverTypeWeights = { ...serverTypeWeights, ...parseJsonWeights(preference.serverTypeWeights) };
-      regionWeights = { ...regionWeights, ...parseJsonWeights(preference.regionWeights) };
+      schoolTypeWeights = { ...schoolTypeWeights, ...parseJsonWeights(preference.schoolTypeWeights) };
+      difficultyWeights = { ...difficultyWeights, ...parseJsonWeights(preference.difficultyWeights) };
+      originCountryWeights = {
+        ...originCountryWeights,
+        ...parseJsonWeights(preference.originCountryWeights),
+      };
       languageWeights = { ...languageWeights, ...parseJsonWeights(preference.languageWeights) };
       tagWeights = { ...tagWeights, ...parseJsonWeights(preference.tagWeights) };
     }
@@ -232,8 +247,9 @@ async function buildRecommendationContext(
   }
 
   const inferred = await loadEngagedServerTraits(Array.from(new Set(engagedVideoIds)));
-  serverTypeWeights = { ...inferred.serverTypeWeights, ...serverTypeWeights };
-  regionWeights = { ...inferred.regionWeights, ...regionWeights };
+  schoolTypeWeights = { ...inferred.schoolTypeWeights, ...schoolTypeWeights };
+  difficultyWeights = { ...inferred.difficultyWeights, ...difficultyWeights };
+  originCountryWeights = { ...inferred.originCountryWeights, ...originCountryWeights };
   languageWeights = { ...inferred.languageWeights, ...languageWeights };
   tagWeights = { ...inferred.tagWeights, ...tagWeights };
 
@@ -241,8 +257,9 @@ async function buildRecommendationContext(
     followedCreatorIds,
     followedServerIds,
     watchCounts,
-    serverTypeWeights,
-    regionWeights,
+    schoolTypeWeights,
+    difficultyWeights,
+    originCountryWeights,
     languageWeights,
     tagWeights,
     searchTokens: Array.from(searchTokens),
@@ -273,14 +290,22 @@ function scoreVideo(
   }
 
   if (server) {
-    const preferredTypes = topKeys(ctx.serverTypeWeights);
-    if (preferredTypes.includes(server.serverType)) {
-      score += RECOMMENDATION_SCORES.SERVER_TYPE_MATCH;
+    const preferredSchools = topKeys(ctx.schoolTypeWeights);
+    if (preferredSchools.includes(server.schoolType)) {
+      score += RECOMMENDATION_SCORES.SCHOOL_TYPE_MATCH;
     }
 
-    const preferredRegions = topKeys(ctx.regionWeights);
+    const preferredDifficulties = topKeys(ctx.difficultyWeights);
+    if (preferredDifficulties.includes(server.gameplayDifficulty)) {
+      score += RECOMMENDATION_SCORES.DIFFICULTY_MATCH;
+    }
+
+    const preferredCountries = topKeys(ctx.originCountryWeights);
     const preferredLanguages = topKeys(ctx.languageWeights);
-    if (preferredRegions.includes(server.region) || preferredLanguages.includes(server.language)) {
+    if (
+      preferredCountries.includes(server.originCountry) ||
+      preferredLanguages.includes(server.mainLanguage)
+    ) {
       score += RECOMMENDATION_SCORES.LANGUAGE_REGION_MATCH;
     }
 
@@ -337,9 +362,44 @@ export async function getRecommendedVideos(
 ): Promise<RecommendedVideosResult> {
   const { userId, sessionId, query, filters = {}, limit = 20, cursor } = params;
 
-  const filterWhere = filters.q || Object.keys(filters).some((k) => k !== "q" && filters[k as keyof FeedFilters])
-    ? buildFeedWhere({ ...filters, q: filters.q ?? query }).where
-    : publicVideoWhere();
+  const { followingOnly, ...rankingFilters } = filters;
+  let filterWhere =
+    rankingFilters.q ||
+    Object.keys(rankingFilters).some((k) => k !== "q" && rankingFilters[k as keyof typeof rankingFilters])
+      ? buildFeedWhere({ ...rankingFilters, q: rankingFilters.q ?? query }).where
+      : publicVideoWhere();
+
+  if (followingOnly) {
+    if (!userId) {
+      return { videos: [], nextCursor: null, total: 0 };
+    }
+    const [creatorFollows, serverFollows] = await Promise.all([
+      prisma.follow.findMany({
+        where: { followerId: userId },
+        select: { followingId: true },
+      }),
+      prisma.serverFollow.findMany({
+        where: { userId },
+        select: { serverId: true },
+      }),
+    ]);
+    const creatorIds = creatorFollows.map((f) => f.followingId);
+    const serverIds = serverFollows.map((f) => f.serverId);
+    if (creatorIds.length === 0 && serverIds.length === 0) {
+      return { videos: [], nextCursor: null, total: 0 };
+    }
+    filterWhere = {
+      AND: [
+        filterWhere,
+        {
+          OR: [
+            ...(creatorIds.length > 0 ? [{ creatorId: { in: creatorIds } }] : []),
+            ...(serverIds.length > 0 ? [{ serverId: { in: serverIds } }] : []),
+          ],
+        },
+      ],
+    };
+  }
 
   const candidates = await prisma.video.findMany({
     where: filterWhere,

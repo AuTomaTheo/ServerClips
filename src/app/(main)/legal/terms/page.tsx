@@ -8,7 +8,7 @@ export default function TermsPage() {
     <Metin2LegalPage title="Terms of Service">
       <p className="text-sm text-[#6b5a40]">Last updated: {new Date().toLocaleDateString()}</p>
 
-      <div className="metin2-disclaimer">
+      <div className="app-disclaimer">
         <p>{LEGAL_DISCLAIMER}</p>
       </div>
 

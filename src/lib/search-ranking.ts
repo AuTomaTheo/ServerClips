@@ -1,4 +1,5 @@
-import { SERVER_TYPES } from "@/lib/constants";
+import { GAMEPLAY_DIFFICULTIES, SCHOOL_TYPES } from "@/lib/constants";
+import { buildServerSystemsWhere } from "@/lib/server-systems";
 import type { Prisma } from "@/generated/prisma/client";
 import type { FeedFilters } from "@/types/feed";
 
@@ -18,12 +19,26 @@ export interface RankableVideo {
   } | null;
   server: {
     name: string;
-    serverType: string;
-    language: string;
-    region: string;
+    schoolType: string;
+    gameplayDifficulty: string;
+    mainLanguage: string;
+    originCountry: string;
+    maxLevel: number | null;
     launchDate: Date | null;
     featured: boolean;
     verified: boolean;
+    systemAlchemy: boolean;
+    systemScarf: boolean;
+    systemLycan: boolean;
+    systemBonus67: boolean;
+    systemOfflineShop: boolean;
+    systemCostume: boolean;
+    systemPet: boolean;
+    systemMount: boolean;
+    systemBattlePass: boolean;
+    systemDungeonRanking: boolean;
+    systemElement: boolean;
+    systemTalisman: boolean;
     tags: { tag: { name: string } }[];
   } | null;
 }
@@ -42,6 +57,14 @@ function metricViews(video: RankableVideo) {
 
 function metricLikes(video: RankableVideo) {
   return video.metrics?.likes ?? 0;
+}
+
+function labelForSchool(value: string) {
+  return SCHOOL_TYPES.find((t) => t.value === value)?.label.toLowerCase() ?? "";
+}
+
+function labelForDifficulty(value: string) {
+  return GAMEPLAY_DIFFICULTIES.find((t) => t.value === value)?.label.toLowerCase() ?? "";
 }
 
 export function rankVideos<T extends RankableVideo>(videos: T[], query?: string): T[] {
@@ -77,10 +100,15 @@ export function rankVideos<T extends RankableVideo>(videos: T[], query?: string)
       for (const token of tokens) {
         if (sn.includes(token)) score += 25;
       }
-      const label =
-        SERVER_TYPES.find((t) => t.value === server.serverType)?.label.toLowerCase() ?? "";
+      const schoolLabel = labelForSchool(server.schoolType);
+      const diffLabel = labelForDifficulty(server.gameplayDifficulty);
       for (const token of tokens) {
-        if (server.serverType.toLowerCase().includes(token) || label.includes(token)) {
+        if (
+          server.schoolType.toLowerCase().includes(token) ||
+          schoolLabel.includes(token) ||
+          server.gameplayDifficulty.toLowerCase().includes(token) ||
+          diffLabel.includes(token)
+        ) {
           score += 15;
         }
       }
@@ -112,63 +140,81 @@ export function rankVideos<T extends RankableVideo>(videos: T[], query?: string)
     .map((s) => s.video) as T[];
 }
 
+function normalizeFeedFilters(filters: FeedFilters): FeedFilters {
+  return {
+    ...filters,
+    schoolType: filters.schoolType ?? filters.serverType,
+    mainLanguage: filters.mainLanguage ?? filters.language,
+    originCountry: filters.originCountry ?? filters.region,
+  };
+}
+
 export function buildFeedWhere(filters: FeedFilters): {
   where: Prisma.VideoWhereInput;
   recentlyAdded: boolean;
 } {
+  const f = normalizeFeedFilters(filters);
   const and: Prisma.VideoWhereInput[] = [
     { status: "APPROVED", visibility: "PUBLIC" },
     { creator: { status: { in: ["ACTIVE", "WARNED"] } } },
   ];
 
-  if (filters.serverType) {
-    and.push({ server: { serverType: filters.serverType as Prisma.EnumServerTypeFilter } });
+  const serverWhere: Prisma.ServerWhereInput = {};
+
+  if (f.schoolType) {
+    serverWhere.schoolType = f.schoolType as Prisma.EnumSchoolTypeFilter;
   }
-  if (filters.language) {
-    and.push({ server: { language: filters.language } });
+  if (f.gameplayDifficulty) {
+    serverWhere.gameplayDifficulty = f.gameplayDifficulty as Prisma.EnumGameplayDifficultyFilter;
   }
-  if (filters.region) {
-    and.push({ server: { region: filters.region } });
+  if (f.mainLanguage) {
+    serverWhere.mainLanguage = f.mainLanguage;
   }
-  if (filters.verifiedOnly) {
-    and.push({ server: { verified: true } });
+  if (f.originCountry) {
+    serverWhere.originCountry = f.originCountry;
   }
-  if (filters.international) {
-    and.push({
-      server: {
-        OR: [
-          { language: "English" },
-          { region: "Global" },
-          {
-            tags: {
-              some: { tag: { name: { contains: "international", mode: "insensitive" } } },
-            },
-          },
-        ],
-      },
-    });
+  if (f.maxLevel) {
+    serverWhere.maxLevel = { lte: f.maxLevel };
   }
-  if (filters.launchingSoon) {
+  if (f.verifiedOnly) {
+    serverWhere.verified = true;
+  }
+  if (f.systems?.length) {
+    serverWhere.AND = buildServerSystemsWhere(f.systems);
+  }
+  if (f.international) {
+    serverWhere.OR = [
+      { mainLanguage: "English" },
+      { originCountry: "Global" },
+      { supportedLanguages: { has: "English" } },
+    ];
+  }
+  if (f.launchingSoon) {
     const now = new Date();
     const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    and.push({ server: { launchDate: { gte: now, lte: in30Days } } });
+    serverWhere.launchDate = { gte: now, lte: in30Days };
   }
 
-  return { where: { AND: and }, recentlyAdded: !!filters.recentlyAdded };
+  if (Object.keys(serverWhere).length > 0) {
+    and.push({ server: serverWhere });
+  }
+
+  return { where: { AND: and }, recentlyAdded: !!f.recentlyAdded };
 }
 
 export function rankServers<
   T extends {
     name: string;
-    description: string;
+    description: string | null;
     _count: { videos: number };
     createdAt: Date;
     featured?: boolean;
     verified?: boolean;
     tags: { tag: { name: string } }[];
-    language: string;
-    region: string;
-    serverType: string;
+    mainLanguage: string;
+    originCountry: string;
+    schoolType: string;
+    gameplayDifficulty: string;
     videos?: { metrics?: { views: number } | null }[];
   },
 >(servers: T[], query?: string): T[] {
@@ -191,10 +237,17 @@ export function rankServers<
       for (const tag of server.tags) {
         for (const t of tokens) if (normalize(tag.tag.name).includes(t)) score += 12;
       }
-      const label =
-        SERVER_TYPES.find((st) => st.value === server.serverType)?.label.toLowerCase() ?? "";
+      const schoolLabel = labelForSchool(server.schoolType);
+      const diffLabel = labelForDifficulty(server.gameplayDifficulty);
       for (const t of tokens) {
-        if (server.serverType.toLowerCase().includes(t) || label.includes(t)) score += 15;
+        if (
+          server.schoolType.toLowerCase().includes(t) ||
+          schoolLabel.includes(t) ||
+          server.gameplayDifficulty.toLowerCase().includes(t) ||
+          diffLabel.includes(t)
+        ) {
+          score += 15;
+        }
       }
       if (server.verified) score += 10;
       return { server, score };

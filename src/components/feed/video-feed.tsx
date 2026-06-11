@@ -4,51 +4,60 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import type { FeedItem, FeedFilters } from "@/types/feed";
 import { VideoFeedItem } from "./video-feed-item";
-import { FeedTopBar } from "./feed-top-bar";
+import { FeedTopBar, type FeedTab } from "./feed-top-bar";
 import { SearchOverlay } from "./search-overlay";
 import { BottomNav } from "./bottom-nav";
-
-function buildQuery(filters: FeedFilters): string {
-  const params = new URLSearchParams();
-  if (filters.q) params.set("q", filters.q);
-  if (filters.serverType) params.set("serverType", filters.serverType);
-  if (filters.language) params.set("language", filters.language);
-  if (filters.region) params.set("region", filters.region);
-  if (filters.international) params.set("international", "true");
-  if (filters.launchingSoon) params.set("launchingSoon", "true");
-  if (filters.verifiedOnly) params.set("verifiedOnly", "true");
-  return params.toString();
-}
+import { buildFeedQuery } from "@/lib/feed-filters";
+import Link from "next/link";
 
 export function VideoFeed({ initialItems }: { initialItems: FeedItem[] }) {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
+  const isAuthenticated = sessionStatus === "authenticated" && !!session?.user;
+  const knownGuest = sessionStatus === "unauthenticated";
+  const sessionPending = sessionStatus === "loading";
   const [items, setItems] = useState<FeedItem[]>(initialItems);
   const [activeIndex, setActiveIndex] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [feedTab, setFeedTab] = useState<FeedTab>("forYou");
   const [filters, setFilters] = useState<FeedFilters>({});
   const [loadingMore, setLoadingMore] = useState(false);
+  const [loadingTab, setLoadingTab] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLElement | null)[]>([]);
 
-  const loadFeed = useCallback(async (f: FeedFilters, cursor?: string) => {
-    const qs = buildQuery(f);
-    const url = `/api/feed?${qs}&limit=20${cursor ? `&cursor=${cursor}` : ""}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    return data as { items: FeedItem[]; nextCursor: string | null };
-  }, []);
+  const loadFeed = useCallback(
+    async (f: FeedFilters, cursor?: string) => {
+      const qs = buildFeedQuery(f);
+      const url = `/api/feed?${qs}&limit=20${cursor ? `&cursor=${cursor}` : ""}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      return data as { items: FeedItem[]; nextCursor: string | null };
+    },
+    []
+  );
 
   const applyFilters = useCallback(
-    async (f: FeedFilters) => {
-      setFilters(f);
+    async (f: FeedFilters, tab: FeedTab = feedTab) => {
+      const merged = { ...f, followingOnly: tab === "following" };
+      setFilters(merged);
       setActiveIndex(0);
-      const data = await loadFeed(f);
+      setLoadingTab(true);
+      const data = await loadFeed(merged);
       setItems(data.items);
       setNextCursor(data.nextCursor);
+      setLoadingTab(false);
       containerRef.current?.scrollTo({ top: 0 });
     },
-    [loadFeed]
+    [feedTab, loadFeed]
+  );
+
+  const switchTab = useCallback(
+    async (tab: FeedTab) => {
+      setFeedTab(tab);
+      await applyFilters(filters, tab);
+    },
+    [applyFilters, filters]
   );
 
   useEffect(() => {
@@ -90,24 +99,48 @@ export function VideoFeed({ initialItems }: { initialItems: FeedItem[] }) {
     }
   }, [activeIndex, items.length, nextCursor, loadingMore, filters, loadFeed]);
 
+  if (loadingTab) {
+    return (
+      <div className="relative flex h-[100dvh] items-center justify-center bg-black">
+        <FeedTopBar activeTab={feedTab} onTabChange={switchTab} onSearchOpen={() => setSearchOpen(true)} />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-red-500 border-t-transparent" />
+        <BottomNav />
+      </div>
+    );
+  }
+
   if (items.length === 0) {
     return (
-      <div className="flex h-[100dvh] flex-col items-center justify-center bg-zinc-950 px-6 text-center">
-        <FeedTopBar onSearchOpen={() => setSearchOpen(true)} />
-        <p className="text-lg text-zinc-300">No server videos found</p>
-        <p className="mt-2 text-sm text-zinc-500">
-          Try adjusting your search or explore all servers.
+      <div className="relative flex h-[100dvh] flex-col items-center justify-center bg-black px-6 text-center">
+        <FeedTopBar activeTab={feedTab} onTabChange={switchTab} onSearchOpen={() => setSearchOpen(true)} />
+        <p className="text-lg font-semibold text-white">
+          {feedTab === "following" ? "No videos from people you follow" : "No server videos found"}
         </p>
-        <a
-          href="/explore"
-          className="mt-6 rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold hover:bg-violet-500"
-        >
-          Browse Explore
-        </a>
+        <p className="mt-2 text-sm text-zinc-500">
+          {feedTab === "following"
+            ? "Follow creators or servers to build your Following feed."
+            : "Try adjusting your search or explore all servers."}
+        </p>
+        {feedTab === "following" ? (
+          <button
+            type="button"
+            onClick={() => switchTab("forYou")}
+            className="mt-6 rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-500 active:scale-95"
+          >
+            Browse For You
+          </button>
+        ) : (
+          <Link
+            href="/explore"
+            className="mt-6 rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-500 active:scale-95"
+          >
+            Explore Servers
+          </Link>
+        )}
         <SearchOverlay
           open={searchOpen}
           onClose={() => setSearchOpen(false)}
-          onApplyFilters={applyFilters}
+          onApplyFilters={(f) => applyFilters(f, feedTab)}
           initialFilters={filters}
         />
         <BottomNav />
@@ -116,12 +149,15 @@ export function VideoFeed({ initialItems }: { initialItems: FeedItem[] }) {
   }
 
   return (
-    <div className="relative h-[100dvh] w-full overflow-hidden bg-[#0a0a0a]">
-      <FeedTopBar onSearchOpen={() => setSearchOpen(true)} />
+    <div
+      className="relative h-[100dvh] w-full overflow-hidden bg-black"
+      data-auth-status={sessionStatus}
+    >
+      <FeedTopBar activeTab={feedTab} onTabChange={switchTab} onSearchOpen={() => setSearchOpen(true)} />
 
       <div
         ref={containerRef}
-        className="feed-scroll-container h-full w-full overflow-y-scroll overscroll-y-contain"
+        className="feed-scroll-container h-full w-full overflow-y-scroll overscroll-y-contain pt-10 pb-20"
       >
         {items.map((item, index) => (
           <VideoFeedItem
@@ -129,7 +165,9 @@ export function VideoFeed({ initialItems }: { initialItems: FeedItem[] }) {
             item={item}
             index={index}
             isActive={index === activeIndex}
-            isAuthenticated={!!session?.user}
+            isAuthenticated={isAuthenticated}
+            knownGuest={knownGuest}
+            sessionPending={sessionPending}
             currentUserId={session?.user?.id}
             itemRef={(el) => {
               itemRefs.current[index] = el;
@@ -141,7 +179,7 @@ export function VideoFeed({ initialItems }: { initialItems: FeedItem[] }) {
       <SearchOverlay
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
-        onApplyFilters={applyFilters}
+        onApplyFilters={(f) => applyFilters(f, feedTab)}
         initialFilters={filters}
       />
       <BottomNav />

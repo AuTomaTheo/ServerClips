@@ -4,24 +4,84 @@
 
 @layer base {
   :root {
-    --background: 240 10% 4%;
+    --background: 0 0% 4%;
     --foreground: 0 0% 95%;
-    --card: 240 6% 10%;
+    --card: 0 0% 7%;
     --card-foreground: 0 0% 95%;
-    --primary: 262 83% 58%;
+    --primary: 0 72% 51%;
     --primary-foreground: 0 0% 100%;
-    --muted: 240 4% 16%;
-    --muted-foreground: 240 5% 65%;
-    --border: 240 4% 16%;
-    --ring: 262 83% 58%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 55%;
+    --border: 0 0% 15%;
+    --ring: 0 72% 51%;
   }
 
   body {
-    @apply bg-zinc-950 text-zinc-100 antialiased;
+    @apply bg-black text-zinc-100 antialiased;
     background-image:
-      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124, 58, 237, 0.15), transparent),
-      radial-gradient(ellipse 60% 40% at 100% 0%, rgba(192, 38, 211, 0.08), transparent);
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(220, 38, 38, 0.08), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 0%, rgba(220, 38, 38, 0.04), transparent);
     min-height: 100vh;
+  }
+}
+
+@layer components {
+  .app-page-bg {
+    @apply min-h-screen bg-black text-zinc-100;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(220, 38, 38, 0.06), transparent);
+  }
+
+  .app-card {
+    @apply rounded-xl border border-zinc-800 bg-zinc-900/80;
+  }
+
+  .app-section-title {
+    @apply text-xs font-bold uppercase tracking-widest text-zinc-500;
+  }
+
+  .app-pill {
+    @apply inline-flex items-center rounded-full border border-zinc-700 bg-zinc-800/80 px-2 py-0.5 text-[10px] font-medium text-zinc-300;
+  }
+
+  .app-pill-red {
+    @apply inline-flex items-center rounded-full bg-red-600/20 px-2 py-0.5 text-[10px] font-semibold text-red-400;
+  }
+
+  .app-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-red-900/20 transition-all hover:bg-red-500 active:scale-[0.97];
+  }
+
+  .app-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-zinc-800 active:scale-[0.97];
+  }
+
+  .app-label {
+    @apply mb-1.5 block text-sm font-medium text-zinc-400;
+  }
+
+  .app-input {
+    @apply w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500;
+  }
+
+  .app-nav-item {
+    @apply w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white;
+  }
+
+  .app-nav-item-active {
+    @apply bg-red-600/15 text-red-400;
+  }
+
+  .app-filter-pill {
+    @apply rounded-full border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:border-zinc-600 hover:text-white;
+  }
+
+  .app-filter-pill-active {
+    @apply border-red-500/50 bg-red-600/15 text-red-400;
+  }
+
+  .app-disclaimer {
+    @apply mt-6 rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 text-xs text-zinc-500;
   }
 }
 
@@ -128,6 +188,18 @@
   font-size: 0.875rem;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
   cursor: pointer;
+  transition: transform 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease;
+}
+
+.metin2-btn:active:not(:disabled):not(.pointer-events-none) {
+  transform: scale(0.96);
+  filter: brightness(0.92);
+}
+
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active {
+  transform: scale(0.97);
+  transition: transform 0.1s ease, filter 0.1s ease;
 }
 
 .metin2-btn-primary {
@@ -304,6 +376,17 @@
 
 .metin2-feed-cta:hover {
   background: linear-gradient(180deg, #c02828 0%, #8b1a1a 100%);
+}
+
+.metin2-feed-cta:active {
+  transform: scale(0.96);
+  filter: brightness(0.92);
+}
+
+a.metin2-btn:active,
+.metin2-feed-cta:active {
+  transform: scale(0.96);
+  filter: brightness(0.92);
 }
 
 .metin2-input {

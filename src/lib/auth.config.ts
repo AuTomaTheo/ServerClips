@@ -64,6 +64,15 @@ export const authConfig = {
           delete token.impersonatingUserId;
           delete token.impersonatedBy;
         }
+        if (session.role) {
+          token.role = session.role as Role;
+        }
+        if (session.username) {
+          token.username = session.username as string;
+        }
+        if (session.displayName) {
+          token.displayName = session.displayName as string;
+        }
       }
 
       return token;

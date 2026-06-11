@@ -1,3 +1,5 @@
+import type { ServerSystemKey } from "@/lib/constants";
+
 export interface FeedCreator {
   id: string;
   username: string | null;
@@ -5,21 +7,39 @@ export interface FeedCreator {
   avatarUrl: string | null;
 }
 
-export interface FeedServer {
+export interface FeedServerSystems {
+  systemAlchemy: boolean;
+  systemScarf: boolean;
+  systemLycan: boolean;
+  systemBonus67: boolean;
+  systemOfflineShop: boolean;
+  systemCostume: boolean;
+  systemPet: boolean;
+  systemMount: boolean;
+  systemBattlePass: boolean;
+  systemDungeonRanking: boolean;
+  systemElement: boolean;
+  systemTalisman: boolean;
+}
+
+export interface FeedServer extends FeedServerSystems {
   id: string;
   name: string;
   slug: string;
+  logoUrl: string | null;
+  bannerUrl: string | null;
   websiteUrl: string | null;
   discordUrl: string | null;
-  region: string;
-  language: string;
-  serverType: string;
-  expRate: string;
-  yangRate: string;
-  dropRate: string;
+  originCountry: string;
+  mainLanguage: string;
+  supportedLanguages: string[];
+  schoolType: string;
+  gameplayDifficulty: string;
+  maxLevel: number | null;
   launchDate: string | null;
   verified: boolean;
   tags: string[];
+  otherSystems?: string | null;
 }
 
 export interface FeedMetrics {
@@ -52,11 +72,21 @@ export interface FeedItem {
 
 export interface FeedFilters {
   q?: string;
-  serverType?: string;
-  language?: string;
-  region?: string;
+  schoolType?: string;
+  gameplayDifficulty?: string;
+  mainLanguage?: string;
+  originCountry?: string;
+  maxLevel?: number;
+  systems?: ServerSystemKey[];
   international?: boolean;
   launchingSoon?: boolean;
   recentlyAdded?: boolean;
   verifiedOnly?: boolean;
+  followingOnly?: boolean;
+  /** @deprecated Use schoolType */
+  serverType?: string;
+  /** @deprecated Use mainLanguage */
+  language?: string;
+  /** @deprecated Use originCountry */
+  region?: string;
 }

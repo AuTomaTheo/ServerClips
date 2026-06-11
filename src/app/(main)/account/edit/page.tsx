@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Metin2Frame } from "@/components/metin2/metin2-frame";
 import { ProfileEditForm } from "@/components/profile/profile-edit-form";
 
 export const metadata = { title: "Edit Profile" };
@@ -28,7 +27,8 @@ export default async function EditProfilePage() {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-10 sm:px-6">
-      <Metin2Frame title="Edit Profile">
+      <div className="app-card p-6">
+        <h1 className="mb-6 text-xl font-bold text-white">Edit Profile</h1>
         <ProfileEditForm
           defaultValues={{
             displayName: user.displayName ?? "",
@@ -40,7 +40,7 @@ export default async function EditProfilePage() {
             socialLinks: (user.socialLinks as Record<string, string>) ?? {},
           }}
         />
-      </Metin2Frame>
+      </div>
     </div>
   );
 }

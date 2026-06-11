@@ -11,18 +11,31 @@ import {
   getGuestSessionIdFromRequest,
 } from "@/lib/guest-session";
 import type { FeedFilters } from "@/types/feed";
+import type { ServerSystemKey } from "@/lib/constants";
+
+function parseSystemsParam(value: string | null): ServerSystemKey[] | undefined {
+  if (!value) return undefined;
+  const systems = value.split(",").filter(Boolean) as ServerSystemKey[];
+  return systems.length > 0 ? systems : undefined;
+}
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const filters: FeedFilters = {
     q: searchParams.get("q") ?? undefined,
-    serverType: searchParams.get("serverType") ?? undefined,
-    language: searchParams.get("language") ?? undefined,
-    region: searchParams.get("region") ?? undefined,
+    schoolType: searchParams.get("schoolType") ?? searchParams.get("serverType") ?? undefined,
+    gameplayDifficulty: searchParams.get("gameplayDifficulty") ?? undefined,
+    mainLanguage: searchParams.get("mainLanguage") ?? searchParams.get("language") ?? undefined,
+    originCountry: searchParams.get("originCountry") ?? searchParams.get("region") ?? undefined,
+    maxLevel: searchParams.get("maxLevel")
+      ? parseInt(searchParams.get("maxLevel")!, 10)
+      : undefined,
+    systems: parseSystemsParam(searchParams.get("systems")),
     international: searchParams.get("international") === "true",
     launchingSoon: searchParams.get("launchingSoon") === "true",
     recentlyAdded: searchParams.get("recentlyAdded") === "true",
     verifiedOnly: searchParams.get("verifiedOnly") === "true",
+    followingOnly: searchParams.get("following") === "true",
   };
 
   const cursor = searchParams.get("cursor") ?? undefined;

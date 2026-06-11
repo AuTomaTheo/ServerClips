@@ -2,12 +2,18 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { videoSchema } from "@/lib/validators/video";
-import { isCreator, canManageServerVideos } from "@/lib/permissions";
+import { canManageServerVideos } from "@/lib/permissions";
 import { getServerMember } from "@/lib/servers";
+import { promoteToCreatorIfNeeded } from "@/lib/users";
 
 export async function POST(req: Request) {
   const session = await auth();
-  if (!session?.user || !isCreator(session.user)) {
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const allowedRoles = ["USER", "CREATOR", "MODERATOR", "ADMIN"];
+  if (!allowedRoles.includes(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -41,7 +47,12 @@ export async function POST(req: Request) {
     include: { metrics: true },
   });
 
-  return NextResponse.json(video, { status: 201 });
+  const promotedToCreator = await promoteToCreatorIfNeeded(
+    session.user.id,
+    session.user.role
+  );
+
+  return NextResponse.json({ ...video, promotedToCreator }, { status: 201 });
 }
 
 export async function GET(req: Request) {

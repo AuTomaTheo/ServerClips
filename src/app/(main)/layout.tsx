@@ -8,7 +8,7 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="metin2-page-bg flex min-h-screen flex-col">
+    <div className="app-page-bg flex min-h-screen flex-col">
       <ImpersonationBanner />
       <Navbar />
       <main className="flex-1">{children}</main>

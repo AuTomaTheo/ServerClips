@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginInput } from "@/lib/validators/auth";
-import { Metin2Button } from "@/components/metin2/metin2-button";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 export function LoginForm() {
@@ -38,46 +38,46 @@ export function LoginForm() {
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
       {error && (
-        <div className="rounded border border-red-800 bg-red-950/30 px-3 py-2 text-sm text-red-300">
+        <div className="rounded-lg border border-red-800 bg-red-950/30 px-3 py-2 text-sm text-red-300">
           {error}
         </div>
       )}
 
       <div>
-        <label htmlFor="email" className="metin2-label">Email</label>
+        <label htmlFor="email" className="app-label">Email</label>
         <input
           id="email"
           type="email"
           autoComplete="email"
-          className="metin2-input w-full px-3 py-2"
+          className="app-input"
           {...form.register("email")}
         />
         {form.formState.errors.email && (
-          <p className="mt-1 text-sm text-red-700">{form.formState.errors.email.message}</p>
+          <p className="mt-1 text-sm text-red-400">{form.formState.errors.email.message}</p>
         )}
       </div>
 
       <div>
-        <label htmlFor="password" className="metin2-label">Password</label>
+        <label htmlFor="password" className="app-label">Password</label>
         <input
           id="password"
           type="password"
           autoComplete="current-password"
-          className="metin2-input w-full px-3 py-2"
+          className="app-input"
           {...form.register("password")}
         />
         {form.formState.errors.password && (
-          <p className="mt-1 text-sm text-red-700">{form.formState.errors.password.message}</p>
+          <p className="mt-1 text-sm text-red-400">{form.formState.errors.password.message}</p>
         )}
       </div>
 
-      <Metin2Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+      <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
         Log in
-      </Metin2Button>
+      </Button>
 
-      <p className="text-center text-sm text-[#4a3020]">
+      <p className="text-center text-sm text-zinc-500">
         No account?{" "}
-        <Link href="/register" className="font-semibold text-[#8b1a1a] hover:underline">
+        <Link href="/register" className="font-semibold text-red-400 hover:underline">
           Sign up
         </Link>
       </p>

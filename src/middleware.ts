@@ -32,12 +32,23 @@ export default auth((req) => {
     if (!isLoggedIn) {
       return NextResponse.redirect(new URL("/login", req.url));
     }
-    if (!["CREATOR", "MODERATOR", "ADMIN"].includes(role ?? "")) {
+    const isUploadPage =
+      pathname === "/studio/videos/new" || pathname.startsWith("/studio/videos/new/");
+    if (
+      !isUploadPage &&
+      !["CREATOR", "MODERATOR", "ADMIN"].includes(role ?? "")
+    ) {
       return NextResponse.redirect(new URL("/", req.url));
     }
   }
 
   if (pathname.startsWith("/server-dashboard")) {
+    if (!isLoggedIn) {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+  }
+
+  if (pathname.startsWith("/submit-server")) {
     if (!isLoggedIn) {
       return NextResponse.redirect(new URL("/login", req.url));
     }
@@ -59,5 +70,6 @@ export const config = {
     "/dashboard",
     "/dashboard/:path*",
     "/servers/:path*",
+    "/submit-server",
   ],
 };

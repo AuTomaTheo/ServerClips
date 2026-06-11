@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema, type RegisterInput } from "@/lib/validators/auth";
-import { Metin2Button } from "@/components/metin2/metin2-button";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 export function RegisterForm() {
@@ -42,68 +42,68 @@ export function RegisterForm() {
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
       {error && (
-        <div className="rounded border border-red-800 bg-red-950/30 px-3 py-2 text-sm text-red-300">
+        <div className="rounded-lg border border-red-800 bg-red-950/30 px-3 py-2 text-sm text-red-300">
           {error}
         </div>
       )}
 
       <div>
-        <label htmlFor="name" className="metin2-label">Display name</label>
-        <input id="name" className="metin2-input w-full px-3 py-2" {...form.register("name")} />
+        <label htmlFor="name" className="app-label">Display name</label>
+        <input id="name" className="app-input" {...form.register("name")} />
         {form.formState.errors.name && (
-          <p className="mt-1 text-sm text-red-700">{form.formState.errors.name.message}</p>
+          <p className="mt-1 text-sm text-red-400">{form.formState.errors.name.message}</p>
         )}
       </div>
 
       <div>
-        <label htmlFor="email" className="metin2-label">Email</label>
+        <label htmlFor="email" className="app-label">Email</label>
         <input
           id="email"
           type="email"
           autoComplete="email"
-          className="metin2-input w-full px-3 py-2"
+          className="app-input"
           {...form.register("email")}
         />
         {form.formState.errors.email && (
-          <p className="mt-1 text-sm text-red-700">{form.formState.errors.email.message}</p>
+          <p className="mt-1 text-sm text-red-400">{form.formState.errors.email.message}</p>
         )}
       </div>
 
       <div>
-        <label htmlFor="password" className="metin2-label">Password</label>
+        <label htmlFor="password" className="app-label">Password</label>
         <input
           id="password"
           type="password"
           autoComplete="new-password"
-          className="metin2-input w-full px-3 py-2"
+          className="app-input"
           {...form.register("password")}
         />
         {form.formState.errors.password && (
-          <p className="mt-1 text-sm text-red-700">{form.formState.errors.password.message}</p>
+          <p className="mt-1 text-sm text-red-400">{form.formState.errors.password.message}</p>
         )}
       </div>
 
       <div>
-        <label htmlFor="confirmPassword" className="metin2-label">Confirm password</label>
+        <label htmlFor="confirmPassword" className="app-label">Confirm password</label>
         <input
           id="confirmPassword"
           type="password"
           autoComplete="new-password"
-          className="metin2-input w-full px-3 py-2"
+          className="app-input"
           {...form.register("confirmPassword")}
         />
         {form.formState.errors.confirmPassword && (
-          <p className="mt-1 text-sm text-red-700">{form.formState.errors.confirmPassword.message}</p>
+          <p className="mt-1 text-sm text-red-400">{form.formState.errors.confirmPassword.message}</p>
         )}
       </div>
 
-      <Metin2Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+      <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
         Create account
-      </Metin2Button>
+      </Button>
 
-      <p className="text-center text-sm text-[#4a3020]">
+      <p className="text-center text-sm text-zinc-500">
         Already have an account?{" "}
-        <Link href="/login" className="font-semibold text-[#8b1a1a] hover:underline">
+        <Link href="/login" className="font-semibold text-red-400 hover:underline">
           Log in
         </Link>
       </p>

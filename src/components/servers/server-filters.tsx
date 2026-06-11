@@ -2,16 +2,20 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useTransition } from "react";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { LANGUAGES, REGIONS, SERVER_TYPES } from "@/lib/constants";
 import { Search, X } from "lucide-react";
+import { Metin2Frame } from "@/components/metin2/metin2-frame";
+import { Metin2Button } from "@/components/metin2/metin2-button";
+import { ServerFilterSelects, ServerSystemFilters } from "@/components/servers/server-filter-fields";
+import type { ServerSystemKey } from "@/lib/constants";
+import { useState } from "react";
 
 export function ServerFilters() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const [systems, setSystems] = useState<ServerSystemKey[]>(
+    (searchParams.get("systems")?.split(",").filter(Boolean) as ServerSystemKey[]) ?? []
+  );
 
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
@@ -20,109 +24,71 @@ export function ServerFilters() {
         if (value) params.set(key, value);
         else params.delete(key);
       });
+      if (systems.length > 0) params.set("systems", systems.join(","));
+      else params.delete("systems");
       startTransition(() => {
-        router.push(`/?${params.toString()}`);
+        router.push(`/explore?${params.toString()}`);
       });
     },
-    [router, searchParams]
+    [router, searchParams, systems]
   );
 
   const clearFilters = () => {
-    startTransition(() => router.push("/"));
+    setSystems([]);
+    startTransition(() => router.push("/explore"));
   };
 
-  const hasFilters = Array.from(searchParams.keys()).length > 0;
+  const hasFilters = Array.from(searchParams.keys()).length > 0 || systems.length > 0;
 
   return (
-    <div className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-        <Input
-          placeholder="Search servers..."
-          className="pl-10"
-          defaultValue={searchParams.get("q") ?? ""}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              updateParams({ q: (e.target as HTMLInputElement).value });
-            }
+    <Metin2Frame title="Server Filters">
+      <div className="space-y-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-metin2-ink/50" />
+          <input
+            placeholder="Search servers..."
+            className="metin2-input w-full py-2 pl-10 pr-3 text-sm"
+            defaultValue={searchParams.get("q") ?? ""}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                updateParams({ q: (e.target as HTMLInputElement).value });
+              }
+            }}
+          />
+        </div>
+
+        <ServerFilterSelects
+          values={{
+            schoolType: searchParams.get("schoolType") ?? undefined,
+            gameplayDifficulty: searchParams.get("gameplayDifficulty") ?? undefined,
+            originCountry: searchParams.get("originCountry") ?? undefined,
+            mainLanguage: searchParams.get("mainLanguage") ?? undefined,
+            maxLevel: searchParams.get("maxLevel") ?? undefined,
+          }}
+          onChange={(key, value) => updateParams({ [key]: value })}
+        />
+
+        <ServerSystemFilters
+          active={systems}
+          onToggle={(key) => {
+            const next = systems.includes(key)
+              ? systems.filter((s) => s !== key)
+              : [...systems, key];
+            setSystems(next);
+            const params = new URLSearchParams(searchParams.toString());
+            if (next.length) params.set("systems", next.join(","));
+            else params.delete("systems");
+            startTransition(() => router.push(`/explore?${params.toString()}`));
           }}
         />
+
+        {hasFilters && (
+          <Metin2Button variant="ghost" onClick={clearFilters} disabled={isPending} className="text-sm">
+            <X className="h-4 w-4" />
+            Clear filters
+          </Metin2Button>
+        )}
       </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Select
-          defaultValue={searchParams.get("language") ?? ""}
-          onChange={(e) => updateParams({ language: e.target.value })}
-        >
-          <option value="">All languages</option>
-          {LANGUAGES.map((lang) => (
-            <option key={lang} value={lang}>
-              {lang}
-            </option>
-          ))}
-        </Select>
-
-        <Select
-          defaultValue={searchParams.get("serverType") ?? ""}
-          onChange={(e) => updateParams({ serverType: e.target.value })}
-        >
-          <option value="">All types</option>
-          {SERVER_TYPES.map((type) => (
-            <option key={type.value} value={type.value}>
-              {type.label}
-            </option>
-          ))}
-        </Select>
-
-        <Select
-          defaultValue={searchParams.get("region") ?? ""}
-          onChange={(e) => updateParams({ region: e.target.value })}
-        >
-          <option value="">All regions</option>
-          {REGIONS.map((region) => (
-            <option key={region} value={region}>
-              {region}
-            </option>
-          ))}
-        </Select>
-
-        <Input
-          placeholder="EXP rate (e.g. x50)"
-          defaultValue={searchParams.get("expRate") ?? ""}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              updateParams({ expRate: (e.target as HTMLInputElement).value });
-            }
-          }}
-        />
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Input
-          type="date"
-          defaultValue={searchParams.get("launchAfter") ?? ""}
-          onChange={(e) => updateParams({ launchAfter: e.target.value })}
-          aria-label="Launch after"
-        />
-        <Input
-          type="date"
-          defaultValue={searchParams.get("launchBefore") ?? ""}
-          onChange={(e) => updateParams({ launchBefore: e.target.value })}
-          aria-label="Launch before"
-        />
-      </div>
-
-      {hasFilters && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={clearFilters}
-          disabled={isPending}
-        >
-          <X className="h-4 w-4" />
-          Clear filters
-        </Button>
-      )}
-    </div>
+    </Metin2Frame>
   );
 }

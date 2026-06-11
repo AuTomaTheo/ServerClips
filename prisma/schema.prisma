@@ -21,13 +21,19 @@ enum UserStatus {
   BANNED
 }
 
-enum ServerType {
+enum SchoolType {
   OLDSCHOOL
   MIDDLESCHOOL
   NEWSCHOOL
+}
+
+enum GameplayDifficulty {
+  EASY
+  MEDIUM
+  HARD
+  FARM
   PVP
-  PVM
-  MIXED
+  PVP_FARM
 }
 
 enum ContentStatus {
@@ -46,9 +52,12 @@ enum VideoVisibility {
 
 enum ServerMemberRole {
   OWNER
-  ADMIN
+  CO_OWNER
+  ADMINISTRATOR
+  COMMUNITY_MANAGER
   PROMOTER
-  ANALYST
+  CONTENT_CREATOR
+  PLAYER
 }
 
 enum VerificationStatus {
@@ -62,6 +71,11 @@ enum CommentStatus {
   VISIBLE
   HIDDEN
   DELETED
+}
+
+enum CommentReactionType {
+  LIKE
+  DISLIKE
 }
 
 enum ReportReason {
@@ -128,6 +142,7 @@ model User {
   sessions          Session[]
   videos            Video[]         @relation("VideoCreator")
   comments          Comment[]
+  commentReactions  CommentReaction[]
   likes             Like[]
   saves             Save[]
   followers         Follow[]        @relation("Following")
@@ -187,16 +202,30 @@ model Server {
   slug               String             @unique
   logoUrl            String?
   bannerUrl          String?
-  description        String             @db.Text
+  description        String?            @db.Text
   websiteUrl         String?
   discordUrl         String?
-  region             String
-  language           String
-  serverType         ServerType
-  expRate            String
-  yangRate           String
-  dropRate           String
   launchDate         DateTime?
+  maxLevel           Int?
+  schoolType         SchoolType
+  gameplayDifficulty GameplayDifficulty
+  originCountry      String
+  mainLanguage       String
+  supportedLanguages String[]
+  representsServer   Boolean            @default(false)
+  systemAlchemy      Boolean            @default(false)
+  systemScarf        Boolean            @default(false)
+  systemLycan        Boolean            @default(false)
+  systemBonus67      Boolean            @default(false)
+  systemOfflineShop  Boolean            @default(false)
+  systemCostume      Boolean            @default(false)
+  systemPet          Boolean            @default(false)
+  systemMount        Boolean            @default(false)
+  systemBattlePass   Boolean            @default(false)
+  systemDungeonRanking Boolean          @default(false)
+  systemElement      Boolean            @default(false)
+  systemTalisman     Boolean            @default(false)
+  otherSystems       String?            @db.Text
   status             ContentStatus      @default(PENDING)
   verified           Boolean            @default(false)
   verificationStatus VerificationStatus @default(NONE)
@@ -211,9 +240,10 @@ model Server {
   tags               ServerTag[]
 
   @@index([status])
-  @@index([serverType])
-  @@index([region])
-  @@index([language])
+  @@index([schoolType])
+  @@index([gameplayDifficulty])
+  @@index([originCountry])
+  @@index([mainLanguage])
   @@index([verified])
   @@index([launchDate])
   @@index([slug])
@@ -335,16 +365,34 @@ model Comment {
   id        String        @id @default(cuid())
   userId    String
   videoId   String
+  parentId  String?
   body      String        @db.Text
   status    CommentStatus @default(VISIBLE)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   video     Video         @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  parent    Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[]     @relation("CommentReplies")
+  reactions CommentReaction[]
 
   @@index([videoId])
   @@index([userId])
+  @@index([parentId])
   @@index([status])
+}
+
+model CommentReaction {
+  id        String              @id @default(cuid())
+  userId    String
+  commentId String
+  type      CommentReactionType
+  createdAt DateTime            @default(now())
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment   Comment             @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId])
+  @@index([commentId])
 }
 
 model Like {
@@ -447,11 +495,12 @@ model AdminAuditLog {
 }
 
 model RecommendationPreference {
-  userId            String   @id
-  tagWeights        Json?
-  serverTypeWeights Json?
-  regionWeights     Json?
-  languageWeights   Json?
-  updatedAt         DateTime @updatedAt
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                 String   @id
+  tagWeights             Json?
+  schoolTypeWeights      Json?
+  difficultyWeights      Json?
+  originCountryWeights   Json?
+  languageWeights        Json?
+  updatedAt              DateTime @updatedAt
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
