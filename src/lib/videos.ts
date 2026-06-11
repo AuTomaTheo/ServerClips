@@ -2,6 +2,7 @@ import { ContentStatus, Prisma, VideoVisibility } from "@/generated/prisma/clien
 import { prisma } from "@/lib/prisma";
 import type { FeedFilters, FeedItem, FeedMetrics } from "@/types/feed";
 import { buildFeedWhere } from "@/lib/search-ranking";
+import { videoUrlForPlayback } from "@/lib/media-url";
 
 const emptyMetrics = (): FeedMetrics => ({
   views: 0,
@@ -157,7 +158,7 @@ export function mapVideoToFeedItem(
     id: video.id,
     title: video.title,
     description: video.description ?? "",
-    videoUrl: video.videoUrl,
+    videoUrl: videoUrlForPlayback(video.videoUrl) ?? video.videoUrl,
     thumbnailUrl: video.thumbnailUrl,
     metrics: mapMetrics(video.metrics),
     liked: engagement.liked,
