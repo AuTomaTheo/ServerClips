@@ -1,12 +1,36 @@
 import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { UploadThingError } from "uploadthing/server";
-import { auth } from "@/lib/auth";
+import { getToken } from "next-auth/jwt";
+import type { NextRequest } from "next/server";
+import type { Role } from "@/generated/prisma/client";
+
 const f = createUploadthing();
 
 function assertCanUpload(role: string) {
   if (!["USER", "CREATOR", "MODERATOR", "ADMIN"].includes(role)) {
     throw new UploadThingError("Forbidden");
   }
+}
+
+async function requireUploadSession(req: NextRequest) {
+  const token = await getToken({
+    req,
+    secret: process.env.AUTH_SECRET,
+  });
+
+  if (!token) {
+    throw new UploadThingError("Unauthorized — please sign in again");
+  }
+
+  const userId = (token.id ?? token.sub) as string | undefined;
+  const role = token.role as Role | undefined;
+
+  if (!userId || !role) {
+    throw new UploadThingError("Unauthorized — session expired");
+  }
+
+  assertCanUpload(role);
+  return { userId };
 }
 
 export const ourFileRouter = {
@@ -17,14 +41,9 @@ export const ourFileRouter = {
         maxFileCount: 1,
       },
     },
-    { awaitServerData: false }
+    { awaitServerData: true }
   )
-    .middleware(async () => {
-      const session = await auth();
-      if (!session?.user) throw new UploadThingError("Unauthorized");
-      assertCanUpload(session.user.role);
-      return { userId: session.user.id };
-    })
+    .middleware(async ({ req }) => requireUploadSession(req))
     .onUploadComplete(async ({ file }) => {
       return { url: file.url, key: file.key };
     }),
@@ -36,14 +55,9 @@ export const ourFileRouter = {
         maxFileCount: 1,
       },
     },
-    { awaitServerData: false }
+    { awaitServerData: true }
   )
-    .middleware(async () => {
-      const session = await auth();
-      if (!session?.user) throw new UploadThingError("Unauthorized");
-      assertCanUpload(session.user.role);
-      return { userId: session.user.id };
-    })
+    .middleware(async ({ req }) => requireUploadSession(req))
     .onUploadComplete(async ({ file }) => {
       return { url: file.url, key: file.key };
     }),

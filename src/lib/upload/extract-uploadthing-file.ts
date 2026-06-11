@@ -20,6 +20,6 @@ export function extractUploadThingFile(
     (typeof serverData?.key === "string" && serverData.key) ||
     null;
 
-  if (!url || !key) return null;
-  return { url, key };
+  if (!url) return null;
+  return { url, key: key ?? url };
 }

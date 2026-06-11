@@ -38,6 +38,7 @@ declare module "@auth/core/jwt" {
 }
 
 export const authConfig = {
+  trustHost: true,
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
