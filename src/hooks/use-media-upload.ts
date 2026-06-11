@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useUploadThing } from "@/lib/uploadthing";
+import { extractUploadThingFile } from "@/lib/upload/extract-uploadthing-file";
 
 export type MediaUploadKind = "image" | "video";
 
@@ -10,7 +11,10 @@ export interface MediaUploadResult {
   key: string;
 }
 
-async function uploadViaApi(
+const PRODUCTION_UPLOAD_HINT =
+  "Upload failed. Add UPLOADTHING_TOKEN in Vercel (https://uploadthing.com/dashboard), enable Production scope, then redeploy.";
+
+async function uploadViaLocalApi(
   file: File,
   kind: MediaUploadKind
 ): Promise<MediaUploadResult> {
@@ -39,19 +43,23 @@ export function useMediaUpload() {
 
         try {
           const res = await startUpload([file]);
-          const uploaded = res?.[0];
-          if (uploaded?.url) {
-            return { url: uploaded.url, key: uploaded.key };
-          }
-        } catch {
+          const parsed = extractUploadThingFile(
+            res?.[0] as Record<string, unknown> | undefined
+          );
+          if (parsed) return parsed;
+        } catch (err) {
           if (process.env.NODE_ENV === "production") {
-            throw new Error(
-              "Upload failed. Add UPLOADTHING_TOKEN in Vercel (https://uploadthing.com/dashboard) or configure S3."
-            );
+            const message =
+              err instanceof Error ? err.message : PRODUCTION_UPLOAD_HINT;
+            throw new Error(message || PRODUCTION_UPLOAD_HINT);
           }
         }
 
-        return uploadViaApi(file, kind);
+        if (process.env.NODE_ENV === "production") {
+          throw new Error(PRODUCTION_UPLOAD_HINT);
+        }
+
+        return uploadViaLocalApi(file, kind);
       } finally {
         setUploading(false);
       }

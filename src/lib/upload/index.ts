@@ -7,7 +7,6 @@ import {
   MAX_IMAGE_SIZE_MB,
   MAX_VIDEO_SIZE_MB,
 } from "@/lib/constants";
-import { isObjectStorageConfigured } from "@/lib/upload/config";
 import { isS3Configured, uploadToS3 } from "@/lib/upload/s3";
 
 export type UploadKind = "image" | "video";
@@ -54,14 +53,25 @@ export function validateUpload(
   return { ok: true };
 }
 
-/** Production: UploadThing (client) or S3. Development: local disk when unset. */
+function isServerlessHost(): boolean {
+  return (
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL === "1" ||
+    !!process.env.AWS_LAMBDA_FUNCTION_NAME
+  );
+}
+
+/** Server-side uploads: S3 in production, local disk in dev only. */
 export function getUploadBackend(): "s3" | "local" {
-  if (process.env.NODE_ENV === "production" && !isObjectStorageConfigured()) {
+  if (isS3Configured()) return "s3";
+
+  if (isServerlessHost()) {
     throw new Error(
-      "Object storage must be configured in production. Set UPLOADTHING_TOKEN (recommended — https://uploadthing.com/dashboard) or S3_BUCKET, S3_REGION, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY."
+      "Server-side upload is unavailable on Vercel. Uploads go through UploadThing in the browser — set UPLOADTHING_TOKEN in Vercel (https://uploadthing.com/dashboard) and redeploy."
     );
   }
-  return isS3Configured() ? "s3" : "local";
+
+  return "local";
 }
 
 export async function uploadFile(
