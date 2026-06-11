@@ -11,8 +11,41 @@ export interface MediaUploadResult {
   key: string;
 }
 
-const PRODUCTION_UPLOAD_HINT =
-  "Upload failed. Add UPLOADTHING_TOKEN in Vercel (https://uploadthing.com/dashboard), enable Production scope, then redeploy.";
+async function uploadViaS3Presign(
+  file: File,
+  kind: MediaUploadKind
+): Promise<MediaUploadResult | null> {
+  const res = await fetch("/api/upload/presign", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      kind,
+      filename: file.name,
+      contentType: file.type,
+      size: file.size,
+    }),
+  });
+
+  if (res.status === 404) return null;
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error ?? "S3 upload failed");
+  }
+
+  const put = await fetch(data.uploadUrl, {
+    method: "PUT",
+    body: file,
+    headers: { "Content-Type": file.type },
+  });
+
+  if (!put.ok) {
+    throw new Error("Failed to upload file to storage");
+  }
+
+  return { url: data.publicUrl, key: data.key };
+}
 
 async function uploadViaLocalApi(
   file: File,
@@ -38,6 +71,9 @@ export function useMediaUpload() {
     async (file: File, kind: MediaUploadKind): Promise<MediaUploadResult> => {
       setUploading(true);
       try {
+        const s3Result = await uploadViaS3Presign(file, kind);
+        if (s3Result) return s3Result;
+
         const startUpload =
           kind === "video" ? video.startUpload : image.startUpload;
 
@@ -48,15 +84,17 @@ export function useMediaUpload() {
           );
           if (parsed) return parsed;
         } catch (err) {
+          const message =
+            err instanceof Error ? err.message : "Upload failed";
           if (process.env.NODE_ENV === "production") {
-            const message =
-              err instanceof Error ? err.message : PRODUCTION_UPLOAD_HINT;
-            throw new Error(message || PRODUCTION_UPLOAD_HINT);
+            throw new Error(message);
           }
         }
 
         if (process.env.NODE_ENV === "production") {
-          throw new Error(PRODUCTION_UPLOAD_HINT);
+          throw new Error(
+            "Upload failed. Configure S3 (S3_BUCKET, S3_REGION, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY) or UPLOADTHING_TOKEN in Vercel, then redeploy."
+          );
         }
 
         return uploadViaLocalApi(file, kind);

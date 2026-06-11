@@ -67,7 +67,7 @@ export function getUploadBackend(): "s3" | "local" {
 
   if (isServerlessHost()) {
     throw new Error(
-      "Server-side upload is unavailable on Vercel. Uploads go through UploadThing in the browser — set UPLOADTHING_TOKEN in Vercel (https://uploadthing.com/dashboard) and redeploy."
+      "Server-side upload is unavailable on Vercel. Use S3 presigned uploads or UploadThing from the browser."
     );
   }
 

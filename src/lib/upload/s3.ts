@@ -27,6 +27,17 @@ export function isS3Configured(): boolean {
   );
 }
 
+export function getS3PublicUrl(key: string): string {
+  const bucket = process.env.S3_BUCKET!;
+  const publicBase =
+    process.env.S3_PUBLIC_URL?.replace(/\/$/, "") ??
+    (process.env.S3_ENDPOINT
+      ? `${process.env.S3_ENDPOINT.replace(/\/$/, "")}/${bucket}`
+      : `https://${bucket}.s3.${process.env.S3_REGION}.amazonaws.com`);
+
+  return `${publicBase}/${key}`;
+}
+
 export async function uploadToS3(
   file: File,
   kind: UploadKind,
@@ -49,11 +60,5 @@ export async function uploadToS3(
     })
   );
 
-  const publicBase =
-    process.env.S3_PUBLIC_URL?.replace(/\/$/, "") ??
-    (process.env.S3_ENDPOINT
-      ? `${process.env.S3_ENDPOINT.replace(/\/$/, "")}/${bucket}`
-      : `https://${bucket}.s3.${process.env.S3_REGION}.amazonaws.com`);
-
-  return { url: `${publicBase}/${key}`, key };
+  return { url: getS3PublicUrl(key), key };
 }
