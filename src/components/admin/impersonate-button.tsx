@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Metin2Button } from "@/components/metin2/metin2-button";
+import { Button } from "@/components/ui/button";
 
 export function ImpersonateButton({ userId, username }: { userId: string; username: string | null }) {
   const { update } = useSession();
@@ -21,8 +21,8 @@ export function ImpersonateButton({ userId, username }: { userId: string; userna
   }
 
   return (
-    <Metin2Button className="text-sm" variant="ghost" onClick={start}>
+    <Button size="sm" variant="outline" onClick={start}>
       View as user
-    </Metin2Button>
+    </Button>
   );
 }

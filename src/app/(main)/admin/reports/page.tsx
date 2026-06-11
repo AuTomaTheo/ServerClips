@@ -1,7 +1,7 @@
+import Link from "next/link";
 import { requireModerator } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { Metin2Frame } from "@/components/metin2/metin2-frame";
-import { Metin2Badge } from "@/components/metin2/metin2-badge";
+import { AdminListCard, AdminPageTitle, AdminStatusBadge } from "@/components/admin/admin-ui";
 import { ReportStatusActions } from "@/components/admin/admin-actions";
 
 export const metadata = { title: "Admin — Reports" };
@@ -69,35 +69,47 @@ export default async function AdminReportsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 font-display text-2xl font-bold text-metin2-gold">Open Reports</h1>
+      <AdminPageTitle title="Open Reports" />
       <div className="space-y-3">
         {enriched.length === 0 ? (
-          <p className="text-metin2-parchment/60">No open reports.</p>
+          <p className="text-zinc-400">No open reports.</p>
         ) : (
           enriched.map((report) => (
-            <Metin2Frame key={report.id}>
-              <div className="mb-2 flex gap-2">
-                <Metin2Badge variant="red">{report.reason}</Metin2Badge>
-                <Metin2Badge>{report.targetType}</Metin2Badge>
-                <span className="text-xs text-[#6b5a40]">
+            <AdminListCard key={report.id}>
+              <div className="mb-2 flex flex-wrap gap-2">
+                <AdminStatusBadge status={report.reason} />
+                <AdminStatusBadge status={report.targetType} />
+                <span className="text-xs text-zinc-500">
                   by {report.reporter?.username ?? report.reporter?.email ?? "Anonymous"}
                 </span>
               </div>
-              {report.video && <p className="text-sm">Video: {report.video.title}</p>}
-              {report.server && <p className="text-sm">Server: {report.server.name}</p>}
+              {report.video && (
+                <p className="text-sm text-zinc-300">
+                  Video:{" "}
+                  <Link
+                    href={`/watch/${report.video.id}?from=admin`}
+                    className="text-red-400 hover:underline"
+                  >
+                    {report.video.title}
+                  </Link>
+                </p>
+              )}
+              {report.server && <p className="text-sm text-zinc-300">Server: {report.server.name}</p>}
               {report.comment && (
-                <p className="text-sm text-[#4a3020]">Comment: {report.comment.body.slice(0, 100)}</p>
+                <p className="text-sm text-zinc-400">
+                  Comment: {report.comment.body.slice(0, 100)}
+                </p>
               )}
               {report.user && (
-                <p className="text-sm">
+                <p className="text-sm text-zinc-300">
                   User: @{report.user.username ?? report.user.displayName}
                 </p>
               )}
-              {report.details && <p className="mt-1 text-sm text-[#4a3020]">{report.details}</p>}
+              {report.details && <p className="mt-1 text-sm text-zinc-500">{report.details}</p>}
               <div className="mt-3">
                 <ReportStatusActions reportId={report.id} />
               </div>
-            </Metin2Frame>
+            </AdminListCard>
           ))
         )}
       </div>

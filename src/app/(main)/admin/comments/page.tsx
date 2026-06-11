@@ -1,8 +1,8 @@
+import Link from "next/link";
 import { requireModerator } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { Metin2Frame } from "@/components/metin2/metin2-frame";
+import { AdminListCard, AdminPageTitle } from "@/components/admin/admin-ui";
 import { DeleteCommentButton } from "@/components/admin/admin-actions";
-import Link from "next/link";
 
 export const metadata = { title: "Admin — Comments" };
 
@@ -24,8 +24,8 @@ export default async function AdminCommentsPage({
     if (reportedIds.length === 0) {
       return (
         <div>
-          <h1 className="mb-4 font-display text-2xl font-bold text-metin2-gold">Comments</h1>
-          <p className="text-metin2-parchment/60">No reported comments.</p>
+          <AdminPageTitle title="Comments" />
+          <p className="text-zinc-400">No reported comments.</p>
         </div>
       );
     }
@@ -62,16 +62,22 @@ export default async function AdminCommentsPage({
 
   return (
     <div>
-      <h1 className="mb-4 font-display text-2xl font-bold text-metin2-gold">Comments</h1>
-      <form className="mb-6 flex gap-2">
+      <AdminPageTitle title="Comments" />
+      <form className="mb-6 flex flex-wrap items-center gap-3">
         <input
           name="q"
           defaultValue={q}
           placeholder="Search comments..."
-          className="metin2-input max-w-md flex-1 px-3 py-2"
+          className="app-input max-w-md flex-1 px-3 py-2"
         />
-        <label className="flex items-center gap-2 text-sm text-metin2-parchment/70">
-          <input type="checkbox" name="reported" value="true" defaultChecked={searchParams.reported === "true"} />
+        <label className="flex items-center gap-2 text-sm text-zinc-400">
+          <input
+            type="checkbox"
+            name="reported"
+            value="true"
+            defaultChecked={searchParams.reported === "true"}
+            className="rounded border-zinc-600"
+          />
           Reported only
         </label>
       </form>
@@ -79,19 +85,24 @@ export default async function AdminCommentsPage({
         {comments.map((comment) => {
           const reports = reportCountMap.get(comment.id) ?? 0;
           return (
-            <Metin2Frame key={comment.id} variant="wood">
-              <p className="text-sm text-[#3d2814]">{comment.body}</p>
-              <p className="mt-2 text-xs text-[#6b5a40]">
+            <AdminListCard key={comment.id}>
+              <p className="text-sm text-zinc-200">{comment.body}</p>
+              <p className="mt-2 text-xs text-zinc-500">
                 by @{comment.user.username ?? comment.user.displayName} on{" "}
-                <Link href={`/?v=${comment.video.id}`} className="text-metin2-red hover:underline">
+                <Link
+                  href={`/watch/${comment.video.id}?from=admin`}
+                  className="text-red-400 hover:underline"
+                >
                   {comment.video.title}
                 </Link>
-                {reports > 0 && <span className="ml-2 text-red-700">{reports} reports</span>}
+                {reports > 0 && (
+                  <span className="ml-2 text-red-400">{reports} reports</span>
+                )}
               </p>
               <div className="mt-3">
                 <DeleteCommentButton commentId={comment.id} />
               </div>
-            </Metin2Frame>
+            </AdminListCard>
           );
         })}
       </div>

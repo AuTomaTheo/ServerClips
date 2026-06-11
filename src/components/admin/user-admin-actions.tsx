@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Metin2Button } from "@/components/metin2/metin2-button";
+import { Button } from "@/components/ui/button";
 import { Role, UserStatus } from "@/generated/prisma/client";
 
 export function UserAdminActions({
@@ -27,18 +27,24 @@ export function UserAdminActions({
   return (
     <div className="flex flex-wrap gap-2">
       {status !== "BANNED" && (
-        <Metin2Button className="text-sm" variant="ghost" onClick={() => action("ban")}>Ban</Metin2Button>
+        <Button size="sm" variant="outline" onClick={() => action("ban")}>
+          Ban
+        </Button>
       )}
       {status === "BANNED" && (
-        <Metin2Button className="text-sm" onClick={() => action("unban")}>Unban</Metin2Button>
+        <Button size="sm" onClick={() => action("unban")}>
+          Unban
+        </Button>
       )}
       {status === "ACTIVE" && (
-        <Metin2Button className="text-sm" variant="ghost" onClick={() => action("warn")}>Warn</Metin2Button>
+        <Button size="sm" variant="outline" onClick={() => action("warn")}>
+          Warn
+        </Button>
       )}
       {role !== "CREATOR" && (
-        <Metin2Button className="text-sm" variant="gold" onClick={() => action("change_role", { role: "CREATOR" })}>
+        <Button size="sm" variant="secondary" onClick={() => action("change_role", { role: "CREATOR" })}>
           Make creator
-        </Metin2Button>
+        </Button>
       )}
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Metin2Button } from "@/components/metin2/metin2-button";
+import { Button } from "@/components/ui/button";
 
 export function ServerStatusActions({
   serverId,
@@ -33,30 +33,26 @@ export function ServerStatusActions({
 
   return (
     <div className="flex flex-wrap gap-2">
-      <Metin2Button className="text-sm" onClick={() => updateStatus("APPROVED")}>
+      <Button size="sm" onClick={() => updateStatus("APPROVED")}>
         Approve
-      </Metin2Button>
-      <Metin2Button className="text-sm" variant="ghost" onClick={() => updateStatus("REJECTED")}>
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => updateStatus("REJECTED")}>
         Reject
-      </Metin2Button>
-      <Metin2Button className="text-sm" variant="ghost" onClick={() => updateStatus("SUSPENDED")}>
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => updateStatus("SUSPENDED")}>
         Suspend
-      </Metin2Button>
-      <Metin2Button
-        className="text-sm"
-        variant="gold"
-        onClick={() => updateStatus(undefined, !featured)}
-      >
+      </Button>
+      <Button size="sm" variant="secondary" onClick={() => updateStatus(undefined, !featured)}>
         {featured ? "Unfeature" : "Feature"}
-      </Metin2Button>
+      </Button>
       {verified !== undefined && (
-        <Metin2Button
-          className="text-sm"
-          variant="ghost"
+        <Button
+          size="sm"
+          variant="outline"
           onClick={() => updateStatus(undefined, undefined, !verified)}
         >
           {verified ? "Unverify" : "Verify"}
-        </Metin2Button>
+        </Button>
       )}
     </div>
   );
@@ -79,15 +75,15 @@ export function ReportStatusActions({ reportId }: { reportId: string }) {
 
   return (
     <div className="flex flex-wrap gap-2">
-      <Metin2Button className="text-sm" variant="ghost" onClick={() => updateStatus("REVIEWING")}>
+      <Button size="sm" variant="outline" onClick={() => updateStatus("REVIEWING")}>
         Reviewing
-      </Metin2Button>
-      <Metin2Button className="text-sm" variant="ghost" onClick={() => updateStatus("DISMISSED")}>
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => updateStatus("DISMISSED")}>
         Dismiss
-      </Metin2Button>
-      <Metin2Button className="text-sm" onClick={() => updateStatus("RESOLVED")}>
+      </Button>
+      <Button size="sm" onClick={() => updateStatus("RESOLVED")}>
         Resolved
-      </Metin2Button>
+      </Button>
     </div>
   );
 }
@@ -101,8 +97,8 @@ export function DeleteCommentButton({ commentId }: { commentId: string }) {
   }
 
   return (
-    <Metin2Button className="text-sm" variant="ghost" onClick={handleDelete}>
+    <Button size="sm" variant="ghost" onClick={handleDelete}>
       Delete
-    </Metin2Button>
+    </Button>
   );
 }

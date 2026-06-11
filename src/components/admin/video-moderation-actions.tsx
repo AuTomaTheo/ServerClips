@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Metin2Button } from "@/components/metin2/metin2-button";
+import { Button } from "@/components/ui/button";
 import { ContentStatus } from "@/generated/prisma/client";
 
 export function VideoModerationActions({
@@ -26,17 +26,27 @@ export function VideoModerationActions({
     <div className="flex flex-wrap gap-2">
       {status === "PENDING" && (
         <>
-          <Metin2Button className="text-sm" onClick={() => updateStatus("APPROVED")}>Approve</Metin2Button>
-          <Metin2Button className="text-sm" variant="ghost" onClick={() => updateStatus("REJECTED")}>Reject</Metin2Button>
+          <Button size="sm" onClick={() => updateStatus("APPROVED")}>
+            Approve
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => updateStatus("REJECTED")}>
+            Reject
+          </Button>
         </>
       )}
       {status === "APPROVED" && (
-        <Metin2Button className="text-sm" variant="ghost" onClick={() => updateStatus("SUSPENDED")}>Suspend</Metin2Button>
+        <Button size="sm" variant="outline" onClick={() => updateStatus("SUSPENDED")}>
+          Suspend
+        </Button>
       )}
       {status === "SUSPENDED" && (
-        <Metin2Button className="text-sm" onClick={() => updateStatus("APPROVED")}>Unsuspend</Metin2Button>
+        <Button size="sm" onClick={() => updateStatus("APPROVED")}>
+          Unsuspend
+        </Button>
       )}
-      <Metin2Button className="text-sm" variant="ghost" onClick={() => updateStatus("DELETED")}>Delete</Metin2Button>
+      <Button size="sm" variant="ghost" onClick={() => updateStatus("DELETED")}>
+        Delete
+      </Button>
     </div>
   );
 }

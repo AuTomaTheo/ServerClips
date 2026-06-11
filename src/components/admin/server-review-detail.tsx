@@ -8,8 +8,7 @@ import {
 } from "@/lib/constants";
 import { otherSystemsLabels, systemsFromServer } from "@/lib/server-systems";
 import { ServerBadges } from "@/components/servers/server-badges";
-import { Metin2Frame } from "@/components/metin2/metin2-frame";
-import { Metin2Badge } from "@/components/metin2/metin2-badge";
+import { AdminSection, AdminStatusBadge } from "@/components/admin/admin-ui";
 import { ExternalLink } from "lucide-react";
 
 export type ServerReviewData = {
@@ -67,15 +66,15 @@ function labelFor(value: string, list: readonly { value: string; label: string }
 
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid gap-1 border-b border-[#5c3d1e]/20 py-3 sm:grid-cols-[10rem_1fr] sm:gap-4">
-      <dt className="text-xs font-semibold uppercase tracking-wide text-[#6b5a40]">{label}</dt>
-      <dd className="text-sm text-[#2a1f0f]">{children}</dd>
+    <div className="grid gap-1 border-b border-zinc-800 py-3 sm:grid-cols-[10rem_1fr] sm:gap-4">
+      <dt className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{label}</dt>
+      <dd className="text-sm text-zinc-200">{children}</dd>
     </div>
   );
 }
 
 function Empty() {
-  return <span className="text-[#6b5a40] italic">Not provided</span>;
+  return <span className="text-zinc-500 italic">Not provided</span>;
 }
 
 export function ServerReviewDetail({ server }: { server: ServerReviewData }) {
@@ -85,24 +84,26 @@ export function ServerReviewDetail({ server }: { server: ServerReviewData }) {
 
   return (
     <div className="space-y-6">
-      <Metin2Frame title="Status">
+      <AdminSection title="Status">
         <div className="flex flex-wrap items-center gap-2">
-          <Metin2Badge>{server.status}</Metin2Badge>
-          {server.verified && <Metin2Badge variant="gold">Verified</Metin2Badge>}
-          {server.featured && <Metin2Badge variant="gold">Featured</Metin2Badge>}
+          <AdminStatusBadge status={server.status} />
+          {server.verified && <AdminStatusBadge status="VERIFIED" />}
+          {server.featured && <AdminStatusBadge status="FEATURED" />}
           {server.representsServer && (
-            <Metin2Badge variant="red">Claims to represent server</Metin2Badge>
+            <span className="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-red-400">
+              Claims to represent server
+            </span>
           )}
-          <Metin2Badge variant="red">Verification: {server.verificationStatus}</Metin2Badge>
+          <AdminStatusBadge status={server.verificationStatus} />
         </div>
-        <p className="mt-3 text-xs text-[#6b5a40]">
+        <p className="mt-3 text-xs text-zinc-500">
           Submitted {format(server.createdAt, "MMM d, yyyy 'at' h:mm a")} · {server._count?.videos ?? 0} videos ·{" "}
           {server.profileViews} profile views
         </p>
-      </Metin2Frame>
+      </AdminSection>
 
       {(server.bannerUrl || server.logoUrl) && (
-        <Metin2Frame title="Media">
+        <AdminSection title="Media">
           <div className="flex flex-col gap-4 sm:flex-row">
             {server.logoUrl && (
               <div>
@@ -131,10 +132,10 @@ export function ServerReviewDetail({ server }: { server: ServerReviewData }) {
               </div>
             )}
           </div>
-        </Metin2Frame>
+        </AdminSection>
       )}
 
-      <Metin2Frame title="Server identity">
+      <AdminSection title="Server identity">
         <dl>
           <DetailRow label="Name">{server.name}</DetailRow>
           <DetailRow label="Slug">
@@ -146,7 +147,7 @@ export function ServerReviewDetail({ server }: { server: ServerReviewData }) {
                 href={server.websiteUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-metin2-red underline-offset-2 hover:underline"
+                className="inline-flex items-center gap-1 text-red-400 underline-offset-2 hover:underline"
               >
                 {server.websiteUrl}
                 <ExternalLink className="h-3 w-3" />
@@ -161,7 +162,7 @@ export function ServerReviewDetail({ server }: { server: ServerReviewData }) {
                 href={server.discordUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-metin2-red underline-offset-2 hover:underline"
+                className="inline-flex items-center gap-1 text-red-400 underline-offset-2 hover:underline"
               >
                 {server.discordUrl}
                 <ExternalLink className="h-3 w-3" />
@@ -174,21 +175,21 @@ export function ServerReviewDetail({ server }: { server: ServerReviewData }) {
             {server.launchDate ? format(server.launchDate, "MMM d, yyyy") : <Empty />}
           </DetailRow>
         </dl>
-      </Metin2Frame>
+      </AdminSection>
 
-      <Metin2Frame title="Description">
+      <AdminSection title="Description">
         {server.description ? (
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#2a1f0f]">{server.description}</p>
         ) : (
           <p className="text-sm italic text-[#6b5a40]">No description provided.</p>
         )}
-      </Metin2Frame>
+      </AdminSection>
 
-      <Metin2Frame title="Submitter">
+      <AdminSection title="Submitter">
         <dl>
           <DetailRow label="User">
             {submitter?.user.username ? (
-              <Link href={`/u/${submitter.user.username}`} className="text-metin2-red hover:underline">
+              <Link href={`/u/${submitter.user.username}`} className="text-red-400 hover:underline">
                 @{submitter.user.username}
               </Link>
             ) : (
@@ -208,9 +209,9 @@ export function ServerReviewDetail({ server }: { server: ServerReviewData }) {
             {server.representsServer ? "Yes — claims official representation" : "No"}
           </DetailRow>
         </dl>
-      </Metin2Frame>
+      </AdminSection>
 
-      <Metin2Frame title="Metin2 metadata">
+      <AdminSection title="Metin2 metadata">
         <ServerBadges server={server} />
         <dl className="mt-4">
           <DetailRow label="School type">{labelFor(server.schoolType, SCHOOL_TYPES)}</DetailRow>
@@ -222,21 +223,21 @@ export function ServerReviewDetail({ server }: { server: ServerReviewData }) {
           </DetailRow>
           <DetailRow label="Max level">{server.maxLevel ?? <Empty />}</DetailRow>
         </dl>
-      </Metin2Frame>
+      </AdminSection>
 
-      <Metin2Frame title="Systems">
+      <AdminSection title="Systems">
         {systems.length === 0 && customSystems.length === 0 ? (
           <p className="text-sm italic text-[#6b5a40]">No systems selected.</p>
         ) : (
           <ul className="grid gap-1 sm:grid-cols-2">
             {systems.map((s) => (
               <li key={s.key} className="flex items-center gap-2 text-sm text-[#2a1f0f]">
-                <span className="text-metin2-gold">✓</span> {s.label}
+                <span className="text-amber-400">✓</span> {s.label}
               </li>
             ))}
             {customSystems.map((label) => (
               <li key={label} className="flex items-center gap-2 text-sm text-[#2a1f0f]">
-                <span className="text-metin2-gold">✓</span> {label}
+                <span className="text-amber-400">✓</span> {label}
               </li>
             ))}
           </ul>
@@ -244,7 +245,7 @@ export function ServerReviewDetail({ server }: { server: ServerReviewData }) {
         {server.otherSystems && customSystems.length === 0 && (
           <p className="mt-3 whitespace-pre-wrap text-sm text-[#2a1f0f]">{server.otherSystems}</p>
         )}
-      </Metin2Frame>
+      </AdminSection>
     </div>
   );
 }

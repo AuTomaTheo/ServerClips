@@ -217,3 +217,16 @@ export function canViewVideo(
   if (video.visibility === "UNLISTED" && video.status === "APPROVED") return true;
   return false;
 }
+
+export async function getVideoForWatch(videoId: string, viewerId?: string, isModerator = false) {
+  const video = await prisma.video.findUnique({
+    where: { id: videoId },
+    include: videoInclude,
+  });
+
+  if (!video) return null;
+  if (video.status === "DELETED") return null;
+  if (!isModerator && !canViewVideo(video, viewerId)) return null;
+
+  return video;
+}

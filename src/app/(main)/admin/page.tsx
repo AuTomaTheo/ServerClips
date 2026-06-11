@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireModerator } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { Metin2Frame } from "@/components/metin2/metin2-frame";
+import { AdminPageTitle } from "@/components/admin/admin-ui";
 
 export const metadata = { title: "Admin Overview" };
 
@@ -34,21 +34,21 @@ export default async function AdminOverviewPage() {
 
   return (
     <div>
-      <h1 className="mb-6 font-display text-3xl font-bold text-metin2-gold">Admin Overview</h1>
+      <AdminPageTitle title="Admin Overview" />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => {
           const card = (
-            <>
-              <p className="text-xs text-metin2-parchment/60">{s.label}</p>
-              <p className="text-2xl font-bold text-metin2-gold">{s.value}</p>
-            </>
+            <div className="app-card p-4 transition-colors hover:border-zinc-600">
+              <p className="text-xs text-zinc-500">{s.label}</p>
+              <p className="mt-1 text-2xl font-bold text-white">{s.value}</p>
+            </div>
           );
           return s.href ? (
-            <Link key={s.label} href={s.href} className="block transition-opacity hover:opacity-90">
-              <Metin2Frame variant="wood">{card}</Metin2Frame>
+            <Link key={s.label} href={s.href} className="block">
+              {card}
             </Link>
           ) : (
-            <Metin2Frame key={s.label} variant="wood">{card}</Metin2Frame>
+            <div key={s.label}>{card}</div>
           );
         })}
       </div>

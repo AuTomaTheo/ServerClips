@@ -1,10 +1,13 @@
+import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { Metin2Frame } from "@/components/metin2/metin2-frame";
-import { Metin2Badge } from "@/components/metin2/metin2-badge";
+import {
+  AdminListCard,
+  AdminPageTitle,
+  AdminStatusBadge,
+} from "@/components/admin/admin-ui";
 import { UserAdminActions } from "@/components/admin/user-admin-actions";
 import { ImpersonateButton } from "@/components/admin/impersonate-button";
-import Link from "next/link";
 
 export const metadata = { title: "Admin — Users" };
 
@@ -41,31 +44,33 @@ export default async function AdminUsersPage({
 
   return (
     <div>
-      <h1 className="mb-4 font-display text-2xl font-bold text-metin2-gold">Users</h1>
+      <AdminPageTitle title="Users" />
       <form className="mb-6">
         <input
           name="q"
           defaultValue={q}
           placeholder="Search username, email..."
-          className="metin2-input w-full max-w-md px-3 py-2"
+          className="app-input w-full max-w-md px-3 py-2"
         />
       </form>
       <div className="space-y-3">
         {users.map((user) => (
-          <Metin2Frame key={user.id} variant="wood">
+          <AdminListCard key={user.id}>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <p className="font-medium text-metin2-gold">
+                <p className="font-medium text-white">
                   {user.username ? (
-                    <Link href={`/u/${user.username}`} className="hover:underline">@{user.username}</Link>
+                    <Link href={`/u/${user.username}`} className="hover:text-red-400">
+                      @{user.username}
+                    </Link>
                   ) : (
                     user.displayName
                   )}
                 </p>
-                <p className="text-xs text-metin2-parchment/60">{user.email}</p>
+                <p className="text-xs text-zinc-500">{user.email}</p>
                 <div className="mt-2 flex gap-2">
-                  <Metin2Badge>{user.role}</Metin2Badge>
-                  <Metin2Badge variant={user.status === "ACTIVE" ? "gold" : "red"}>{user.status}</Metin2Badge>
+                  <AdminStatusBadge status={user.role} />
+                  <AdminStatusBadge status={user.status} />
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -75,7 +80,7 @@ export default async function AdminUsersPage({
                 )}
               </div>
             </div>
-          </Metin2Frame>
+          </AdminListCard>
         ))}
       </div>
     </div>
