@@ -1,6 +1,7 @@
 function resolvePublicAppUrl() {
   if (process.env.NEXT_PUBLIC_APP_URL?.trim()) {
-    return process.env.NEXT_PUBLIC_APP_URL.trim().replace(/\/$/, "");
+    const url = process.env.NEXT_PUBLIC_APP_URL.trim().replace(/\/$/, "");
+    if (!url.includes("localhost")) return url;
   }
   if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
     return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
@@ -11,10 +12,25 @@ function resolvePublicAppUrl() {
   return "http://localhost:3000";
 }
 
+function resolveAuthUrl() {
+  for (const key of ["AUTH_URL", "NEXTAUTH_URL"]) {
+    const value = process.env[key]?.trim();
+    if (value && !value.includes("localhost")) {
+      return value.replace(/\/$/, "");
+    }
+  }
+  return resolvePublicAppUrl();
+}
+
+const appUrl = resolvePublicAppUrl();
+const authUrl = resolveAuthUrl();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   env: {
-    NEXT_PUBLIC_APP_URL: resolvePublicAppUrl(),
+    NEXT_PUBLIC_APP_URL: appUrl,
+    AUTH_URL: authUrl,
+    NEXTAUTH_URL: authUrl,
   },
   images: {
     remotePatterns: [

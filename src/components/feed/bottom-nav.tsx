@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { signOut } from "next-auth/react";
+import { signOutToHome } from "@/lib/auth-client";
 import { useEffect, useRef, useState } from "react";
 import { Home, Compass, Plus, Bookmark, User, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -93,7 +93,7 @@ export function BottomNav() {
                     </Link>
                     <button
                       type="button"
-                      onClick={() => signOut({ callbackUrl: "/" })}
+                      onClick={() => signOutToHome()}
                       className="flex w-full items-center gap-2 border-t border-zinc-800 px-3 py-2.5 text-sm text-red-400 hover:bg-zinc-900"
                     >
                       <LogOut className="h-4 w-4" />
