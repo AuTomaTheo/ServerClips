@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useMediaUpload } from "@/hooks/use-media-upload";
 import { mediaUrlForDisplay } from "@/lib/media-url";
 import { cn } from "@/lib/utils";
 
@@ -52,7 +53,10 @@ export function ServerSubmissionForm({
 }: ServerSubmissionFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState<"logo" | "banner" | null>(null);
+  const [uploadingField, setUploadingField] = useState<"logo" | "banner" | null>(
+    null
+  );
+  const { upload } = useMediaUpload();
   const [othersEnabled, setOthersEnabled] = useState(
     Boolean(defaultValues?.otherSystems?.trim())
   );
@@ -84,20 +88,15 @@ export function ServerSubmissionForm({
   const supportedLanguages = form.watch("supportedLanguages") ?? [];
 
   async function uploadImage(file: File, field: "logoUrl" | "bannerUrl") {
-    setUploading(field === "logoUrl" ? "logo" : "banner");
+    setUploadingField(field === "logoUrl" ? "logo" : "banner");
     setError(null);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("kind", "image");
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error ?? "Upload failed");
+      const result = await upload(file, "image");
       form.setValue(field, result.url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
-      setUploading(null);
+      setUploadingField(null);
     }
   }
 
@@ -218,7 +217,9 @@ export function ServerSubmissionForm({
                 if (file) uploadImage(file, "logoUrl");
               }}
             />
-            {uploading === "logo" && <p className="text-xs text-zinc-500">Uploading...</p>}
+            {uploadingField === "logo" && (
+              <p className="text-xs text-zinc-500">Uploading...</p>
+            )}
             {form.watch("logoUrl") && mediaUrlForDisplay(form.watch("logoUrl")) && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -240,7 +241,9 @@ export function ServerSubmissionForm({
                 if (file) uploadImage(file, "bannerUrl");
               }}
             />
-            {uploading === "banner" && <p className="text-xs text-zinc-500">Uploading...</p>}
+            {uploadingField === "banner" && (
+              <p className="text-xs text-zinc-500">Uploading...</p>
+            )}
             {form.watch("bannerUrl") && mediaUrlForDisplay(form.watch("bannerUrl")) && (
               // eslint-disable-next-line @next/next/no-img-element
               <img

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Cinzel } from "next/font/google";
 import "./globals.css";
 import { AuthSessionProvider } from "@/components/providers/session-provider";
+import { UploadThingSSR } from "@/components/providers/uploadthing-ssr";
 import { LEGAL_DISCLAIMER } from "@/lib/constants";
 import { getAppBaseUrl } from "@/lib/utils";
 
@@ -35,6 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${inter.variable} ${cinzel.variable} ${inter.className} bg-zinc-950 text-zinc-100 antialiased`}>
+        <UploadThingSSR />
         <AuthSessionProvider>{children}</AuthSessionProvider>
       </body>
     </html>

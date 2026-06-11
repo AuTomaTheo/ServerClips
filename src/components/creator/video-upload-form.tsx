@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
+import { useMediaUpload } from "@/hooks/use-media-upload";
 
 export function VideoUploadForm({
   servers,
@@ -25,7 +26,7 @@ export function VideoUploadForm({
   const router = useRouter();
   const { update } = useSession();
   const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const { upload, uploading } = useMediaUpload();
 
   const form = useForm<VideoInput>({
     resolver: zodResolver(videoSchema),
@@ -42,15 +43,13 @@ export function VideoUploadForm({
   async function handleVideoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("kind", "video");
-    const res = await fetch("/api/upload", { method: "POST", body: fd });
-    const data = await res.json();
-    if (res.ok) form.setValue("videoUrl", data.url);
-    else setError(data.error ?? "Upload failed");
-    setUploading(false);
+    setError(null);
+    try {
+      const result = await upload(file, "video");
+      form.setValue("videoUrl", result.url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    }
   }
 
   async function onSubmit(data: VideoInput) {

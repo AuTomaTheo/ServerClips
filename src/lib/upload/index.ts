@@ -7,6 +7,7 @@ import {
   MAX_IMAGE_SIZE_MB,
   MAX_VIDEO_SIZE_MB,
 } from "@/lib/constants";
+import { isObjectStorageConfigured } from "@/lib/upload/config";
 import { isS3Configured, uploadToS3 } from "@/lib/upload/s3";
 
 export type UploadKind = "image" | "video";
@@ -53,11 +54,11 @@ export function validateUpload(
   return { ok: true };
 }
 
-/** Production: S3/R2. Development: local disk when object storage is not configured. */
+/** Production: UploadThing (client) or S3. Development: local disk when unset. */
 export function getUploadBackend(): "s3" | "local" {
-  if (process.env.NODE_ENV === "production" && !isS3Configured()) {
+  if (process.env.NODE_ENV === "production" && !isObjectStorageConfigured()) {
     throw new Error(
-      "Object storage must be configured in production (S3_BUCKET, S3_REGION, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY)"
+      "Object storage must be configured in production. Set UPLOADTHING_TOKEN (recommended — https://uploadthing.com/dashboard) or S3_BUCKET, S3_REGION, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY."
     );
   }
   return isS3Configured() ? "s3" : "local";
