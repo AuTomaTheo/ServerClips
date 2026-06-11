@@ -1,3 +1,5 @@
+import { getAppBaseUrl } from "@/lib/utils";
+
 /** Normalize logo/banner URLs — supports local `/uploads/...` paths and external https URLs. */
 export function normalizeMediaUrl(value: string | null | undefined): string {
   const trimmed = (value ?? "").trim();
@@ -56,10 +58,7 @@ export function mediaUrlForDisplay(value: string | null | undefined): string | n
   if (!normalized) return null;
 
   if (normalized.startsWith("/")) {
-    const base =
-      process.env.NEXT_PUBLIC_APP_URL ??
-      (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
-    return `${base.replace(/\/$/, "")}${normalized}`;
+    return `${getAppBaseUrl()}${normalized}`;
   }
 
   return normalized;

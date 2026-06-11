@@ -3,6 +3,7 @@ import { Inter, Cinzel } from "next/font/google";
 import "./globals.css";
 import { AuthSessionProvider } from "@/components/providers/session-provider";
 import { LEGAL_DISCLAIMER } from "@/lib/constants";
+import { getAppBaseUrl } from "@/lib/utils";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const cinzel = Cinzel({
@@ -18,9 +19,7 @@ export const metadata: Metadata = {
   },
   description:
     "Swipe through promo videos to discover MMORPG private servers. Promotional listings only.",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-  ),
+  metadataBase: new URL(getAppBaseUrl()),
   openGraph: {
     title: "ServerClips",
     description: LEGAL_DISCLAIMER,
